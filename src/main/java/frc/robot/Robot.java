@@ -13,6 +13,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.Outtake;
+
 import static edu.wpi.first.units.Units.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -73,10 +76,10 @@ public class Robot extends TimedRobot {
 
     // Intake Keybind
     m_robotContainer.joystick.leftTrigger(0.1).onTrue(
-      m_robotContainer.drivetrain.alignToPose(new Pose2d()).alongWith(
-        m_robotContainer.elevator.setElevatorPosition(0)).alongWith(
-          m_robotContainer.outtake.setPosition(10).alongWith(
-            m_robotContainer.outtake.runIntake()
+    m_robotContainer.drivetrain.alignToPose(new Pose2d()).alongWith(
+    m_robotContainer.elevator.setPosition(Elevator.elevatorMode.CORAL_INTAKE)).alongWith(
+    m_robotContainer.outtake.setPosition(Outtake.outtakeMode.CORAL_INTAKE).alongWith(
+    m_robotContainer.outtake.runIntake()
           )
         )
     );
@@ -84,15 +87,13 @@ public class Robot extends TimedRobot {
 
     // Right Score Keybind
     m_robotContainer.joystick.rightBumper().onTrue(
-      m_robotContainer.drivetrain.alignToPose(new Pose2d()).alongWith(
-        m_robotContainer.elevator.setElevatorPosition(10).alongWith(
-          m_robotContainer.outtake.setPosition(10).andThen(
-            m_robotContainer.outtake.scoreCoral()
+    m_robotContainer.drivetrain.alignToPose(new Pose2d()).alongWith(
+    m_robotContainer.elevator.setPosition(Elevator.elevatorMode.L2)).alongWith(
+    m_robotContainer.outtake.setPosition(Outtake.outtakeMode.L2).alongWith(
+    m_robotContainer.outtake.runIntake()
           )
         )
-      )
     );
-
 
 
   

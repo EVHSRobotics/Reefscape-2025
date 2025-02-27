@@ -2,6 +2,7 @@
 
 
 
+
 package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
@@ -12,6 +13,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import frc.robot.generated.TunerConstants;
@@ -20,9 +22,7 @@ import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Outtake;
 
 public class RobotContainer {
-
-    public Elevator elevator = new Elevator();
-    public Outtake outtake = new Outtake();
+    CommandXboxController driver = new CommandXboxController(0);
     private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); 
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); 
    
@@ -35,11 +35,25 @@ public class RobotContainer {
 
     public final CommandXboxController joystick = new CommandXboxController(0);
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final Elevator elevator = new Elevator();
+    public final Outtake outtake = new Outtake();
+
     
     public Pose2d target = new Pose2d();
 
     public RobotContainer() {;
         configureBindings();
+
+        // AutoBuilder.configure(
+        //     drivetrain::getRobotPose,
+        //     drivetrain::resetKalman,
+        //     drivetrain::gimmeSpeed,
+        //     drivetrain::iwantItBack,
+        //     new PPHolonomicDriveController(drivetrain.vrooom, drivetrain.skrrrt),
+        //     ,
+        //     null,
+        //     null
+        // );
     }
 
     private void configureBindings() {
@@ -57,3 +71,4 @@ public class RobotContainer {
         return Commands.print("No autonomous command configured");
     }
 }
+
