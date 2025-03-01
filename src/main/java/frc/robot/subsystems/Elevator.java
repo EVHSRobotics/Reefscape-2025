@@ -15,8 +15,30 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Elevator extends SubsystemBase {
 
-  public TalonFX left = new TalonFX(0);
-  public TalonFX right = new TalonFX(0);
+  public TalonFX left = new TalonFX(21);
+  public TalonFX right = new TalonFX(20);
+
+
+  public enum ElevatorMode {
+    Test_1(0),
+    Test_2(0),
+    L1_Coral(0),
+    L2_Coral(0),
+    L3_Coral(0),
+    L4_Coral(0),
+    L2_Algae(0),
+    L3_Algae(0),
+    Source(0),
+    Processor(0),
+    Barge(0),
+    Hang(0);
+
+    public final double pos;
+
+    private ElevatorMode(double pos) {
+        this.pos = pos;
+    }
+  }
 
 
 
@@ -56,7 +78,7 @@ public class Elevator extends SubsystemBase {
   @Override 
   public void periodic() {}
 
-  public Command setElevatorPosition(double pos) {
+  public Command setPosition(ElevatorMode elevatorMode) {
     return new Command() {
       @Override
       public boolean isFinished() {
@@ -76,7 +98,7 @@ public class Elevator extends SubsystemBase {
       
       @Override
       public void execute() {
-        left.setControl(new MotionMagicExpoVoltage(pos));
+        left.setControl(new MotionMagicExpoVoltage(elevatorMode.pos));
       }
     };
   }

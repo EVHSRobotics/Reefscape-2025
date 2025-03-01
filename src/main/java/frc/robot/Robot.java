@@ -8,94 +8,62 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.Outtake;
+import frc.robot.subsystems.Elevator.ElevatorMode;
+import frc.robot.subsystems.Outtake.OuttakeMode;
+
 import static edu.wpi.first.units.Units.*;
 
-import com.pathplanner.lib.auto.AutoBuilder;
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest;
 
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); 
   private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); 
-  private final RobotContainer m_robotContainer;
 
+  
+  public Elevator elevator = new Elevator();
+  public Outtake outtake = new Outtake();
+  private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+            .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) 
+            .withDriveRequestType(DriveRequestType.Velocity); 
 
-
-
-  public StructPublisher<Pose2d> publisher2 = NetworkTableInstance.getDefault()
-        .getStructTopic("Target Pose", Pose2d.struct).publish();
-  public Robot() {
-    m_robotContainer = new RobotContainer();
+            
+  public final CommandXboxController joystick = new CommandXboxController(0);
+  public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     
+  public Pose2d target = new Pose2d();
+
+  public StructPublisher<Pose2d> publisher2 = NetworkTableInstance.getDefault().getStructTopic("Target Pose", Pose2d.struct).publish();
+
+  public Robot() {  
   }
 
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run(); 
+    publisher2.set(target);
 
-    SmartDashboard.putData(CommandScheduler.getInstance());
+    drivetrain.setDefaultCommand(drivetrain.applyRequest(() -> drive
+      .withVelocityX(-joystick.getLeftY() * MaxSpeed*0.2) 
+      .withVelocityY(-joystick.getLeftX() * MaxSpeed *0.2) 
+      .withRotationalRate(-joystick.getRightX() * MaxAngularRate) 
+    ));
 
-    if(m_robotContainer.joystick.a().getAsBoolean()) {
-      m_robotContainer.drivetrain.resetKalman(new Pose2d());
-    }
+    joystick.y().onTrue(elevator.setPosition(ElevatorMode.Test_1));
+    joystick.a().onTrue(elevator.setPosition(ElevatorMode.Test_2));
 
-    if(m_robotContainer.joystick.b().getAsBoolean()) {
-      m_robotContainer.target = m_robotContainer.drivetrain.getRobotPose();
-    } 
-
-    if(m_robotContainer.joystick.y().getAsBoolean()) {
-      m_robotContainer.drivetrain.seenTag = false;
-      m_robotContainer.drivetrain.multiplier = 1;
-    }
+    joystick.leftBumper().onTrue(outtake.setPosition(OuttakeMode.Test_1));
+    joystick.rightBumper().onTrue(outtake.setPosition(OuttakeMode.Test_2));
 
 
-    m_robotContainer.joystick.x().onTrue(m_robotContainer.drivetrain.alignToPose(m_robotContainer.target).withInterruptBehavior(InterruptionBehavior.kCancelSelf));
-
-    publisher2.set(m_robotContainer.target);
-
-    // SmartDashboard.putNumber("x", m_robotContainer.drivetrain.kalman.getEstimatedPosition().getX());
-    // SmartDashboard.putNumber("y", m_robotContainer.drivetrain.kalman.getEstimatedPosition().getY());
-    // SmartDashboard.putNumber("rot", m_robotContainer.drivetrain.kalman.getEstimatedPosition().getRotation().getDegrees());
-
-    // SmartDashboard.putNumber("target X", m_robotContainer.target.getX());
-    // SmartDashboard.putNumber("target Y", m_robotContainer.target.getY());        
-    // SmartDashboard.putNumber("target ROT", m_robotContainer.target.getRotation().getDegrees());
-
-    // SmartDashboard.putBoolean("reached position", m_robotContainer.drivetrain.getRobotPose().getTranslation().getDistance(m_robotContainer.target.getTranslation()) < 0.05);
-          
-
-
-
-
-    // Intake Keybind
-    m_robotContainer.joystick.leftTrigger(0.1).onTrue(
-      m_robotContainer.drivetrain.alignToPose(new Pose2d()).alongWith(
-        m_robotContainer.elevator.setElevatorPosition(0)).alongWith(
-          m_robotContainer.outtake.setPosition(10).alongWith(
-            m_robotContainer.outtake.runIntake()
-          )
-        )
-    );
-
-
-    // Right Score Keybind
-    m_robotContainer.joystick.rightBumper().onTrue(
-      m_robotContainer.drivetrain.alignToPose(new Pose2d()).alongWith(
-        m_robotContainer.elevator.setElevatorPosition(10).alongWith(
-          m_robotContainer.outtake.setPosition(10).andThen(
-            m_robotContainer.outtake.scoreCoral()
-          )
-        )
-      )
-    );
-
-
-
-  
   }
 
   @Override
@@ -109,7 +77,9 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    m_autonomousCommand = new Command() {
+      
+    };
 
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();

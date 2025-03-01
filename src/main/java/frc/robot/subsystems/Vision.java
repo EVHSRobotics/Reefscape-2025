@@ -27,7 +27,7 @@ public class Vision extends SubsystemBase {
   public PhotonPoseEstimator frontRightPoseEstimator, backRightPoseEstimator, frontLeftPoseEstimator, backLeftPoseEstimator;
   public Transform3d frontRightCamPos, backRightCamPos, backLeftCamPos, frontLeftCamPos;
 
-  public enum WhichCamera {
+  public enum Camera {
     FRONT_LEFT, FRONT_RIGHT, BACK_LEFT, BACK_RIGHT
   }
 
@@ -51,33 +51,31 @@ public class Vision extends SubsystemBase {
     frontLeftPoseEstimator = new PhotonPoseEstimator(ATlayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, frontLeftCamPos);
   }
 
-  public Pose2d WhichPose(WhichCamera theOneIReallyWant, Pose2d ThePoseAtThisCurrentMomentAkaUselessShit) {
-    PhotonCamera camer;
+  public Pose2d getCameraPose(Camera requestedCamera, Pose2d currentPose) {
+    PhotonCamera camera;
     
-    switch(theOneIReallyWant) {
+    switch(requestedCamera) {
       case FRONT_LEFT:
-        camer = frontLeftCam;
+      camera = frontLeftCam;
         break;
 
       case FRONT_RIGHT:
-        camer = frontRightCam;
+      camera = frontRightCam;
         break;
         
       case BACK_LEFT:
-        camer = backLeftCam;
+      camera = backLeftCam;
         break;
 
       default:
-        camer = backRightCam;
+      camera = backRightCam;
         break;
     }
-    Transform3d ThePoseAtThisCurrentMomentBut3d = camer.getLatestResult().getMultiTagResult().get().estimatedPose.best;
 
-    return new Pose2d(ThePoseAtThisCurrentMomentBut3d.getX(), ThePoseAtThisCurrentMomentBut3d.getY(),new Rotation2d(ThePoseAtThisCurrentMomentBut3d.getRotation().getX(), ThePoseAtThisCurrentMomentBut3d.getRotation().getY()));
+    Transform3d currentPose3d = camera.getLatestResult().getMultiTagResult().get().estimatedPose.best;
+    return new Pose2d(currentPose3d.getX(), currentPose3d.getY(),new Rotation2d(currentPose3d.getRotation().getX(), currentPose3d.getRotation().getY()));
   }
 
   @Override
-  public void periodic() {
-    // This method will be called once per scheduler run
-  }
+  public void periodic() {}
 }

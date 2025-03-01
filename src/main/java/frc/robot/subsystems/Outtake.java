@@ -11,7 +11,6 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -27,6 +26,25 @@ public class Outtake extends SubsystemBase {
   public CANrange outtakeBanner = new CANrange(0);
 
   public Timer transferTimer = new Timer();
+
+  public enum OuttakeMode {
+    Test_1(0),
+    Test_2(0),
+    L1_Coral(0),
+    L2_Coral(0),
+    L3_Coral(0),
+    L4_Coral(0),
+    Algae(0),
+    Source(0),
+    Barge(0),
+    Hang(0);
+
+    public final double pos;
+
+    private OuttakeMode(double pos) {
+        this.pos = pos;
+    }
+  }
 
 
   public Outtake() {
@@ -62,7 +80,7 @@ public class Outtake extends SubsystemBase {
   @Override 
   public void periodic() {}
 
-  public Command setPosition(double pos) {
+  public Command setPosition(OuttakeMode outtakeMode) {
     return new Command() {
       @Override
       public boolean isFinished() {
@@ -82,7 +100,7 @@ public class Outtake extends SubsystemBase {
       
       @Override
       public void execute() {
-        pivotMotor.setControl(new MotionMagicExpoVoltage(pos));
+        pivotMotor.setControl(new MotionMagicExpoVoltage(outtakeMode.pos));
       }
     };
   }
@@ -127,7 +145,7 @@ public class Outtake extends SubsystemBase {
 
       @Override
       public void execute() {
-        outtakeMotor.set(0.3);
+        outtakeMotor.set(-0.3);
       }
     };
   }
