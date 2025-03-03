@@ -1,3 +1,4 @@
+
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
@@ -27,11 +28,13 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.generated.TunerConstants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.subsystems.Vision.Camera;
 
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Subsystem {
     private static final double kSimLoopPeriod = 0.005; 
@@ -89,6 +92,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         .getStructTopic("Robot Pose", Pose2d.struct).publish();
 
         
+    public Vision vision = new Vision();
+
 
     public Pose2d getRobotPose() {
         return kalman.getEstimatedPosition();
@@ -180,6 +185,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
         kalman.update(getPigeon2().getRotation2d(), super.getState().ModulePositions);
 
+        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.FRONT_RIGHT, getRobotPose()), Timer.getFPGATimestamp());
+        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.BACK_RIGHT, getRobotPose()), Timer.getFPGATimestamp());
+        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.FRONT_LEFT, getRobotPose()), Timer.getFPGATimestamp());
+        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.BACK_LEFT, getRobotPose()), Timer.getFPGATimestamp());
 
 
         publisher.set(getRobotPose());

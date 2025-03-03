@@ -20,6 +20,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Elevator extends SubsystemBase {
 
+<<<<<<< HEAD
   public TalonFX elevator1;
   public TalonFX elevator2;
   public int elevator1Id;
@@ -31,6 +32,32 @@ public class Elevator extends SubsystemBase {
     L3(40),
     L4(50),
     CORAL_INTAKE(0);
+=======
+  public TalonFX left = new TalonFX(21);
+  public TalonFX right = new TalonFX(20);
+
+
+  public enum ElevatorMode {
+    Test_1(0),
+    Test_2(0),
+    L1_Coral(0),
+    L2_Coral(0),
+    L3_Coral(0),
+    L4_Coral(0),
+    L2_Algae(0),
+    L3_Algae(0),
+    Source(0),
+    Processor(0),
+    Barge(0),
+    Hang(0);
+
+    public final double pos;
+
+    private ElevatorMode(double pos) {
+        this.pos = pos;
+    }
+  }
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
 
     private double position;
 
@@ -76,7 +103,12 @@ public class Elevator extends SubsystemBase {
 
   @Override
   public void periodic() {}
+<<<<<<< HEAD
   public Command setPosition(elevatorMode elevatorMode) {
+=======
+
+  public Command setPosition(ElevatorMode elevatorMode) {
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
     return new Command() {
       @Override
       public void execute(){
@@ -89,7 +121,18 @@ public class Elevator extends SubsystemBase {
       }
 
       @Override
+<<<<<<< HEAD
       public void end(boolean interupted){
+=======
+      public void execute() {
+        left.setControl(new MotionMagicExpoVoltage(elevatorMode.pos));
+      }
+    };
+  }
+
+
+
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
 
       }
 
