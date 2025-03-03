@@ -15,12 +15,17 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+<<<<<<< HEAD
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+=======
+import edu.wpi.first.wpilibj.Timer;
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Outtake extends SubsystemBase {
 
+<<<<<<< HEAD
   public TalonFX outtakeMotor;
   public TalonFX outtakeRollers;
   public int outtakeMotorID;
@@ -41,6 +46,37 @@ public class Outtake extends SubsystemBase {
       this.position = position;
     }
   }
+=======
+  public TalonFX intakeMotor = new TalonFX(0);
+
+  public TalonFX pivotMotor = new TalonFX(0);
+  public TalonFX outtakeMotor = new TalonFX(0);
+  public CANcoder pivotEncoder = new CANcoder(0);
+
+  public CANrange outtakeBanner = new CANrange(0);
+
+  public Timer transferTimer = new Timer();
+
+  public enum OuttakeMode {
+    Test_1(0),
+    Test_2(0),
+    L1_Coral(0),
+    L2_Coral(0),
+    L3_Coral(0),
+    L4_Coral(0),
+    Algae(0),
+    Source(0),
+    Barge(0),
+    Hang(0);
+
+    public final double pos;
+
+    private OuttakeMode(double pos) {
+        this.pos = pos;
+    }
+  }
+
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
 
   public Outtake() {
     outtakeMotor = new TalonFX(outtakeMotorID);
@@ -77,7 +113,11 @@ public class Outtake extends SubsystemBase {
   @Override
   public void periodic() {}
 
+<<<<<<< HEAD
   public Command setPosition(outtakeMode outtakeMode) {
+=======
+  public Command setPosition(OuttakeMode outtakeMode) {
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
     return new Command() {
       @Override
       public void execute(){
@@ -90,11 +130,59 @@ public class Outtake extends SubsystemBase {
       }
 
       @Override
+<<<<<<< HEAD
       public void end(boolean interupted){
+=======
+      public void execute() {
+        pivotMotor.setControl(new MotionMagicExpoVoltage(outtakeMode.pos));
+      }
+    };
+  }
+
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
 
       }
 
+<<<<<<< HEAD
   };
+=======
+      @Override
+      public void end(boolean interrupted) {
+          transferTimer.restart();
+          if(!transferTimer.hasElapsed(2)) {
+            outtakeMotor.set(-0.01);
+          }
+          super.end(interrupted);
+      }
+
+      @Override
+      public void execute() {
+        intakeMotor.set(-0.7);
+        outtakeMotor.set(-0.3);
+      }
+    };
+  }
+
+
+  public Command scoreCoral() {
+    return new Command() {
+      @Override
+      public boolean isFinished() {
+          return !(outtakeBanner.getDistance().getValueAsDouble() < 10);
+      }
+
+      @Override
+      public void end(boolean interrupted) {
+          super.end(interrupted);
+      }
+
+      @Override
+      public void execute() {
+        outtakeMotor.set(-0.3);
+      }
+    };
+  }
+>>>>>>> 51fc17cd4599cd8c85bb1d3bbb7c875d309a6e45
 
 }
 
