@@ -11,21 +11,16 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Outtake extends SubsystemBase {
 
-  public TalonFX intakeMotor = new TalonFX(0);
-
-  public TalonFX pivotMotor = new TalonFX(0);
-  public TalonFX outtakeMotor = new TalonFX(0);
-  public CANcoder pivotEncoder = new CANcoder(0);
-
-  public CANrange outtakeBanner = new CANrange(0);
-
-  public Timer transferTimer = new Timer();
+  public TalonFX outtakeMotor;
+  public TalonFX outtakeRollers;
+  public int outtakeMotorID;
+  public int OuttakeRollersID;
 
   public enum OuttakeMode {
     Test_1(0),
@@ -45,7 +40,6 @@ public class Outtake extends SubsystemBase {
         this.pos = pos;
     }
   }
-
 
   public Outtake() {
     
@@ -80,7 +74,7 @@ public class Outtake extends SubsystemBase {
   @Override 
   public void periodic() {}
 
-  public Command setPosition(OuttakeMode outtakeMode) {
+  public Command setPosition(outtakeMode outtakeMode) {
     return new Command() {
       @Override
       public boolean isFinished() {
@@ -99,56 +93,16 @@ public class Outtake extends SubsystemBase {
       }
       
       @Override
-      public void execute() {
-        pivotMotor.setControl(new MotionMagicExpoVoltage(outtakeMode.pos));
-      }
-    };
-  }
+      public void end(boolean interupted){
 
-
-  public Command runIntake() {
-    return new Command() {
-      @Override
-      public boolean isFinished() {
-          return outtakeBanner.getDistance().getValueAsDouble() < 10;
       }
 
-      @Override
-      public void end(boolean interrupted) {
-          transferTimer.restart();
-          if(!transferTimer.hasElapsed(2)) {
-            outtakeMotor.set(-0.01);
-          }
-          super.end(interrupted);
-      }
+  };
 
-      @Override
-      public void execute() {
-        intakeMotor.set(-0.7);
-        outtakeMotor.set(-0.3);
-      }
-    };
-  }
+}
 
-
-  public Command scoreCoral() {
-    return new Command() {
-      @Override
-      public boolean isFinished() {
-          return !(outtakeBanner.getDistance().getValueAsDouble() < 10);
-      }
-
-      @Override
-      public void end(boolean interrupted) {
-          super.end(interrupted);
-      }
-
-      @Override
-      public void execute() {
-        outtakeMotor.set(-0.3);
-      }
-    };
-  }
-
-
+public Command[] runIntake() {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'runIntake'");
+}
 }
