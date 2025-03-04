@@ -22,15 +22,12 @@ public class Elevator extends SubsystemBase {
 
 
   public enum ElevatorMode {
-    Test_1(0),
-    Test_2(0),
-
     Stow(0),
     L2_Coral(0),
     L3_Coral(0),
     L4_Coral(0),
-    L2_Algae(0),
-    L3_Algae(0),
+    Low_Algae(0),
+    High_Algae(0),
     Source(0),
     Processor(0);
 
@@ -50,19 +47,13 @@ public class Elevator extends SubsystemBase {
     Slot0Configs elevatorConfigs = new Slot0Configs();
 
     elevatorConfigs.kP = 5;
-    elevatorConfigs.kI = 0;
     elevatorConfigs.kD = 0;
 
     elevatorConfigs.GravityType = GravityTypeValue.Elevator_Static;
     elevatorConfigs.kG = 1;
 
-    elevatorMMConfig.CurrentLimits.SupplyCurrentLimit = 80;
-    elevatorMMConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-    elevatorMMConfig.CurrentLimits.StatorCurrentLimit = 80;
-    elevatorMMConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
     elevatorMMConfig.Feedback.FeedbackRemoteSensorID = left.getDeviceID();
-    elevatorMMConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
+    elevatorMMConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
     elevatorMMConfig.MotionMagic.MotionMagicAcceleration = 1;
     elevatorMMConfig.MotionMagic.MotionMagicCruiseVelocity = 0.7;
     elevatorMMConfig.MotionMagic.MotionMagicJerk = 0.1;

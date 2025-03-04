@@ -7,14 +7,13 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
-import edu.wpi.first.wpilibj.CAN;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -28,6 +27,7 @@ import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix.led.CANdle;
+import com.ctre.phoenix6.hardware.CANrange;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -47,10 +47,10 @@ public class Robot extends TimedRobot {
 
             
   public final CommandXboxController driver = new CommandXboxController(0);
-  public final CommandXboxController operator = new CommandXboxController(1);
 
   public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
   public Outtake outtake = new Outtake();
+  public Elevator elevator = new Elevator();
 
   public StructPublisher<Pose2d> publisher2 = NetworkTableInstance.getDefault().getStructTopic("Target Pose", Pose2d.struct).publish();
   public TalonFX outtakemotor = new TalonFX(41);
@@ -59,53 +59,86 @@ public class Robot extends TimedRobot {
 
   public boolean x = false;
 
+  public enum ButtonMode {
+    // Coral
+    Set_L2(0),
+    Set_L3(1),
+    Set_L4(2),
+
+    // Algae
+    Set_Reef(3),
+    Set_Processor(4),
+
+    // Align
+    Align_Left(5),
+    Align_Center(6),
+    Align_Right(7);
+
+    public int id;
+
+    ButtonMode(int id) {
+      this.id = id;
+    }
+  }
   
+  ButtonBoard board;
+
+
   private final CANdle m_candle = new CANdle(55, "rio");
 
+
+  String chosenLevel;
+  String chosenAlgae;
+  String chosenAlignment;
+
+  CANrange canRange;
+
   public Robot() {
+
+    canRange = new CANrange(32);
+
     outtakemotor.setNeutralMode(NeutralModeValue.Brake);
     timer = new Timer();
     m_candle.setLEDs(0, 0, 255);
+
+    // board = new ButtonBoard(1);
   }
+
+  ElevatorMode level;
+  OuttakeMode angle;
 
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run(); 
-    // SmartDashboard.putNumber("outtake motor voltage", outtake.outtake.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("outtake position", outtake.arm.getPosition().getValueAsDouble());
 
-    // driver.leftBumper().onTrue(outtake.setPosition(OuttakeMode.Stow));
-    // driver.rightBsumper().onTrue(outtake.setPosition(OuttakeMode.Algae));
-    SmartDashboard.putBoolean("banner", banner.get());
+    driver.leftBumper().onTrue(outtake.setPosition(OuttakeMode.Stow));
+    driver.rightBumper().onTrue(outtake.setPosition(OuttakeMode.Algae));
 
 
-    
-    if(driver.a().getAsBoolean() && !banner.get()) {
-      outtakemotor.set(-0.3);
-      m_candle.setLEDs(255, 0, 0);
-      x = true;
-    }
+    driver.a().onTrue(outtake.runCoralIntake());
+    driver.x().onTrue(outtake.scoreCoral());
 
-    
 
-    if(banner.get() && x) {
-      timer.restart();
-      if(timer.get() < 1.5) {
-        outtakemotor.set(-0.01);
-      } else {
-        outtakemotor.set(0);    
-        m_candle.setLEDs(0, 255, 0);
-        x = false;
-        timer.stop();
-      }
-    }
+    if (driver.leftTrigger().getAsBoolean()) CommandScheduler.getInstance().cancelAll();
 
-    if(driver.b().getAsBoolean()) {
-      outtakemotor.set(-0.7);
-    } else {
-      outtakemotor.set(0);
-    }
-    
-    // SmartDashboard.putBoolean("banner", banner.get());
+    SmartDashboard.putBoolean("can range", canRange.getIsDetected().getValue());
+    SmartDashboard.updateValues();
+
+    // if(board.getButton(ButtonMode.Set_L2)) { chosenLevel = ButtonMode.Set_L2.toString(); level = ElevatorMode.L2_Coral; angle = OuttakeMode.L2_Coral; }
+    // if(board.getButton(ButtonMode.Set_L3)) { chosenLevel = ButtonMode.Set_L3.toString(); level = ElevatorMode.L3_Coral; angle = OuttakeMode.L3_Coral; }
+    // if(board.getButton(ButtonMode.Set_L4)) { chosenLevel = ButtonMode.Set_L4.toString(); level = ElevatorMode.L4_Coral; angle = OuttakeMode.L4_Coral; }
+
+    // if(board.getButton(ButtonMode.Align_Left)) chosenAlignment = ButtonMode.Align_Left.toString();
+    // if(board.getButton(ButtonMode.Align_Center)) chosenAlignment = ButtonMode.Align_Center.toString();
+    // if(board.getButton(ButtonMode.Align_Right)) chosenAlignment = ButtonMode.Align_Right.toString();
+
+    // if(board.getButton(ButtonMode.Set_Processor)) chosenAlgae = ButtonMode.Set_Processor.toString();
+    // if(board.getButton(ButtonMode.Set_Reef)) chosenAlgae = ButtonMode.Set_Reef.toString();
+
+    // SmartDashboard.putString("Chosen Level", chosenLevel);
+    // SmartDashboard.putString("Chosen Algae", chosenAlgae);
+    // SmartDashboard.putString("Chosen Alignment", chosenAlignment);
   }
 
   @Override
@@ -139,6 +172,9 @@ public class Robot extends TimedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+
+
+    CommandScheduler.getInstance().cancelAll();
   }
 
   @Override

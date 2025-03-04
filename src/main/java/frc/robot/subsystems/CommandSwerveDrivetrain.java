@@ -179,19 +179,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
-
-        SmartDashboard.putBoolean("seen tag", seenTag);
-
-        kalman.update(getPigeon2().getRotation2d(), super.getState().ModulePositions);
-
-        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.FRONT_RIGHT, getRobotPose()), Timer.getFPGATimestamp());
-        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.BACK_RIGHT, getRobotPose()), Timer.getFPGATimestamp());
-        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.FRONT_LEFT, getRobotPose()), Timer.getFPGATimestamp());
-        // kalman.addVisionMeasurement(vision.getCameraPose(Camera.BACK_LEFT, getRobotPose()), Timer.getFPGATimestamp());
-
-
-        // publisher.set(getRobotPose());
-        SmartDashboard.updateValues();
     }
 
     private void startSimThread() {

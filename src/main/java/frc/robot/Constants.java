@@ -15,5 +15,5 @@ public class Constants {
 
     public static final int climberMotor = 0;
 
-    public static final int canRangeID = 0;
+    public static final int canRangeID = 32;
 }

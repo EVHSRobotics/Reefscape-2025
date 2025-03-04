@@ -43,7 +43,7 @@ public class Outtake extends SubsystemBase {
   public Outtake() {
     arm = new TalonFX(Constants.armID);
     outtake = new TalonFX(Constants.outtakeID);
-    // canRange = new CANrange(Constants.canRangeID);  
+    canRange = new CANrange(Constants.canRangeID);  
     timer = new Timer();
 
     TalonFXConfiguration outtakeMMConfig = new TalonFXConfiguration();
@@ -51,6 +51,8 @@ public class Outtake extends SubsystemBase {
 
     outtakeConfigs.kP = 40;
 
+
+    outtakeMMConfig.Feedback.FeedbackRotorOffset = 0.37;
     outtakeMMConfig.MotionMagic.MotionMagicCruiseVelocity = 1;
     outtakeMMConfig.MotionMagic.MotionMagicAcceleration = 1.5;
     outtakeMMConfig.MotionMagic.MotionMagicJerk = 3;
@@ -59,12 +61,19 @@ public class Outtake extends SubsystemBase {
 
     outtakeMMConfig.withSlot0(outtakeConfigs);
     arm.getConfigurator().apply(outtakeMMConfig);
-
-    timer.start();
   }
 
   @Override
-  public void periodic() {}
+  public void periodic() {
+    if (timer.get() < 0.5) {
+      outtake.set(-0.1);
+    }
+
+    else if (timer.get() > 0.5) {
+      outtake.set(0);
+      timer.stop();
+    }
+  }
 
   public Command setPosition(OuttakeMode outtakeMode) {
     return new Command() {
@@ -100,24 +109,14 @@ public class Outtake extends SubsystemBase {
 
       @Override
       public boolean isFinished() {
-        return canRange.getDistance().getValueAsDouble() < 0.01;
+        return canRange.getIsDetected(true).getValue();
       }
 
       @Override
       public void end(boolean interupted){
-        timer.reset();
-
-        if(timer.get() < 1.5) {
-          outtake.set(-0.1);
-        }
-        
-        else {
-          outtake.set(0);
-        }
-
-        super.end(interupted);
+        outtake.set(0);
+        timer.restart();
       }
-
 
     };
   }
@@ -144,21 +143,22 @@ public class Outtake extends SubsystemBase {
 
   public Command scoreCoral() {
     return new Command() {
-      @Override
-      public boolean isFinished() {
-        return canRange.getDistance().getValueAsDouble() > 0.01;
-      }
-
-      @Override
-      public void end(boolean interrupted) {
-        outtake.set(0);
-        super.end(interrupted);
-      }
 
       @Override
       public void execute() {
         outtake.set(-1);
       }
+
+      @Override
+      public boolean isFinished() {
+        return !canRange.getIsDetected().getValue();
+      }
+
+      @Override
+      public void end(boolean interrupted) {
+        outtake.set(0);
+      }
     };
   }
+
 }
