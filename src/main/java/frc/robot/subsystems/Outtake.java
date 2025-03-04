@@ -1,43 +1,36 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicExpoVoltage;
-import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.CANrange;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
-import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 
 public class Outtake extends SubsystemBase {
 
-  public TalonFX intakeMotor = new TalonFX(0);
-
-  public TalonFX pivotMotor = new TalonFX(0);
-  public TalonFX outtakeMotor = new TalonFX(0);
-  public CANcoder pivotEncoder = new CANcoder(0);
-
-  public CANrange outtakeBanner = new CANrange(0);
-
-  public Timer transferTimer = new Timer();
+  public TalonFX arm;
+  public TalonFX outtake;
+  public CANrange canRange;
+  public Timer timer;
 
   public enum OuttakeMode {
-    Test_1(0),
-    Test_2(0),
-    L1_Coral(0),
+    Stow(0),
     L2_Coral(0),
     L3_Coral(0),
     L4_Coral(0),
-    Algae(0),
-    Source(0),
-    Barge(0),
-    Hang(0);
+    Algae(0.45),
+    Barge(0);
 
     public final double pos;
 
@@ -48,84 +41,102 @@ public class Outtake extends SubsystemBase {
 
 
   public Outtake() {
-    
-    TalonFXConfiguration pivotMMConfig = new TalonFXConfiguration();
-    Slot0Configs pivotConfigs = new Slot0Configs();
+    arm = new TalonFX(Constants.armID);
+    outtake = new TalonFX(Constants.outtakeID);
+    // canRange = new CANrange(Constants.canRangeID);  
+    timer = new Timer();
 
-    pivotConfigs.kP = 3;
-    pivotConfigs.kI = 0;
-    pivotConfigs.kD = 0;
+    TalonFXConfiguration outtakeMMConfig = new TalonFXConfiguration();
+    Slot0Configs outtakeConfigs = new Slot0Configs();
 
-    pivotConfigs.GravityType = GravityTypeValue.Arm_Cosine;
-    pivotConfigs.kG = 0.17;
+    outtakeConfigs.kP = 40;
 
-    pivotMMConfig.CurrentLimits.SupplyCurrentLimit = 80;
-    pivotMMConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-    pivotMMConfig.CurrentLimits.StatorCurrentLimit = 80;
-    pivotMMConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    outtakeMMConfig.MotionMagic.MotionMagicCruiseVelocity = 1;
+    outtakeMMConfig.MotionMagic.MotionMagicAcceleration = 1.5;
+    outtakeMMConfig.MotionMagic.MotionMagicJerk = 3;
+    outtakeMMConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    outtakeMMConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
+    outtakeMMConfig.withSlot0(outtakeConfigs);
+    arm.getConfigurator().apply(outtakeMMConfig);
 
-    pivotMMConfig.Feedback.FeedbackRemoteSensorID = pivotEncoder.getDeviceID();
-    pivotMMConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
-    pivotMMConfig.MotionMagic.MotionMagicAcceleration = 0.25;
-    pivotMMConfig.MotionMagic.MotionMagicCruiseVelocity = 0.5;
-    pivotMMConfig.MotionMagic.MotionMagicJerk = 0.5;
-    pivotMMConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-    pivotMMConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    pivotMMConfig.withSlot0(pivotConfigs);
-
-    pivotMotor.getConfigurator().apply(pivotMMConfig);
+    timer.start();
   }
 
-  @Override 
+  @Override
   public void periodic() {}
 
   public Command setPosition(OuttakeMode outtakeMode) {
     return new Command() {
       @Override
+      public void execute() {
+        arm.setControl(new MotionMagicExpoVoltage(outtakeMode.pos));
+      }
+
+      @Override
       public boolean isFinished() {
-          return true;
+        return true;
       }
 
       @Override
       public void end(boolean interrupted) {
-          super.end(interrupted);
+        super.end(interrupted);
       }
 
 
       @Override
       public void initialize() {
-        addRequirements(new Elevator());
-      }
-      
-      @Override
-      public void execute() {
-        pivotMotor.setControl(new MotionMagicExpoVoltage(outtakeMode.pos));
+        addRequirements(new Outtake());
       }
     };
   }
 
-
-  public Command runIntake() {
+  public Command runCoralIntake() {
     return new Command() {
       @Override
-      public boolean isFinished() {
-          return outtakeBanner.getDistance().getValueAsDouble() < 10;
+      public void execute() {
+        outtake.set(-0.4);
       }
 
       @Override
-      public void end(boolean interrupted) {
-          transferTimer.restart();
-          if(!transferTimer.hasElapsed(2)) {
-            outtakeMotor.set(-0.01);
-          }
-          super.end(interrupted);
+      public boolean isFinished() {
+        return canRange.getDistance().getValueAsDouble() < 0.01;
+      }
+
+      @Override
+      public void end(boolean interupted){
+        timer.reset();
+
+        if(timer.get() < 1.5) {
+          outtake.set(-0.1);
+        }
+        
+        else {
+          outtake.set(0);
+        }
+
+        super.end(interupted);
+      }
+
+
+    };
+  }
+
+  public Command runAlgaeIntake() {
+    return new Command() {
+      @Override
+      public boolean isFinished() {
+        return outtake.getMotorVoltage().getValueAsDouble() > 40;
+      }
+
+      @Override
+      public void end(boolean interupted){
+        super.end(interupted);
       }
 
       @Override
       public void execute() {
-        intakeMotor.set(-0.7);
-        outtakeMotor.set(-0.3);
+        outtake.set(0.4);
       }
     };
   }
@@ -135,20 +146,19 @@ public class Outtake extends SubsystemBase {
     return new Command() {
       @Override
       public boolean isFinished() {
-          return !(outtakeBanner.getDistance().getValueAsDouble() < 10);
+        return canRange.getDistance().getValueAsDouble() > 0.01;
       }
 
       @Override
       public void end(boolean interrupted) {
-          super.end(interrupted);
+        outtake.set(0);
+        super.end(interrupted);
       }
 
       @Override
       public void execute() {
-        outtakeMotor.set(-0.3);
+        outtake.set(-1);
       }
     };
   }
-
-
 }

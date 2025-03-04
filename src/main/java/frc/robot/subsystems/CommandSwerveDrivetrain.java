@@ -190,8 +190,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // kalman.addVisionMeasurement(vision.getCameraPose(Camera.BACK_LEFT, getRobotPose()), Timer.getFPGATimestamp());
 
 
-        publisher.set(getRobotPose());
-
+        // publisher.set(getRobotPose());
         SmartDashboard.updateValues();
     }
 
