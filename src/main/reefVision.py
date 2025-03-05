@@ -8,6 +8,7 @@ import time
 NetworkTables.initialize(server='10.2854.2')  
 stage_table = NetworkTables.getTable("StageDetection")
 priorityLevel =["L4", "L3", "L2", "L1"]
+
 prioritySide = ["LEFT", "RIGHT"]
 
 interpreter = tflite.Interpreter(model_path="locationasfjasdifw")

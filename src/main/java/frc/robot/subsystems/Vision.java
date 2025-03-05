@@ -18,7 +18,12 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.Elevator.ElevatorMode;
 
 public class Vision extends SubsystemBase {
   public PhotonCamera frontRightCam, backRightCam, backLeftCam, frontLeftCam;
@@ -26,6 +31,9 @@ public class Vision extends SubsystemBase {
   public AprilTagFieldLayout ATlayout;
   public PhotonPoseEstimator frontRightPoseEstimator, backRightPoseEstimator, frontLeftPoseEstimator, backLeftPoseEstimator;
   public Transform3d frontRightCamPos, backRightCamPos, backLeftCamPos, frontLeftCamPos;
+
+  private NetworkTableInstance ntInstance = NetworkTableInstance.getDefault();
+    private NetworkTable stageTable = ntInstance.getTable("StageDetection");
 
   public enum Camera {
     FRONT_LEFT, FRONT_RIGHT, BACK_LEFT, BACK_RIGHT
@@ -78,4 +86,31 @@ public class Vision extends SubsystemBase {
 
   @Override
   public void periodic() {}
+
+  public ElevatorMode getNextElevatorMode(){
+    switch (stageTable.getEntry("next_position").getString("NONE")){
+      case "L1":
+      return ElevatorMode.L1_Coral;
+
+      case "L2":
+      return ElevatorMode.L2_Coral;
+
+      case "L3":
+      return ElevatorMode.L3_Coral;
+
+      case "L4":
+      return ElevatorMode.L4_Coral;
+
+      case "A_TOP":
+      return ElevatorMode.High_Algae;
+
+      case "A_BOTTOM":
+      return ElevatorMode.Low_Algae;
+
+      default:
+      return null;
+    }
+  }
+
+  
 }
