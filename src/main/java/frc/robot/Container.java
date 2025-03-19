@@ -6,7 +6,9 @@ package frc.robot;
 
 import com.ctre.phoenix.led.CANdle;
 import com.ctre.phoenix6.Utils;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 
+import choreo.auto.AutoFactory;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
@@ -15,19 +17,20 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
-import frc.robot.subsystems.Vision;
 import frc.robot.subsystems.Arm;
 
 public class Container {
         Drivetrain drivetrain;
         Arm arm;
         Elevator elevator;
-        Vision vision;
 
         CANdle lights;
 
         Mode mode;
         Elevator.Position coralLevel, algaeLevel;
+
+        private AutoFactory autoFactory;
+
 
         public enum Mode {
                 Coral,
@@ -47,25 +50,39 @@ public class Container {
                 arm = new Arm(Constants.Arm.pivotID, Constants.Arm.rollersID, Constants.Arm.coralRangeID, Constants.Arm.algaeRangeID);
                 elevator = new Elevator(Constants.Elevator.leftID, Constants.Elevator.rightID, Constants.canivoreID);
 
-                vision = new Vision(
-                        Constants.Vision.frontID,
+                // vision = new Vision(
+                //         Constants.Vision.frontID,
 
-                        Constants.Vision.frontLeftID, Constants.Vision.frontLeftOffset,
-                        Constants.Vision.frontRightID, Constants.Vision.frontRightOffset,
-                        Constants.Vision.backLeftID, Constants.Vision.backLeftOffset,
-                        Constants.Vision.backRightID, Constants.Vision.backRightOffset
-                );
+                //         Constants.Vision.frontLeftID, Constants.Vision.frontLeftOffset,
+                //         Constants.Vision.frontRightID, Constants.Vision.frontRightOffset,
+                //         Constants.Vision.backLeftID, Constants.Vision.backLeftOffset,
+                //         Constants.Vision.backRightID, Constants.Vision.backRightOffset
+                // );
 
                 lights = new CANdle(Constants.lightsID);
 
                 mode = Mode.Coral;
                 coralLevel = Elevator.Position.L2_Coral;
                 algaeLevel = Elevator.Position.Low_Algae;
+
+                autoFactory = drivetrain.getAutoFactory();
+    
+                // Set up bindings
+                setupAutoBindings();
         }
+
+        private void setupAutoBindings() {
+                // Bind event markers to commands
+                autoFactory
+                    .bind("intake", runIntake())
+            }
 
         public Drivetrain getDrivetrain() {
                 return drivetrain;
         }
+
+        // In your Container.java class constructor or a setup method
+
 
         public Arm getArm() {
                 return arm;
@@ -75,9 +92,7 @@ public class Container {
                 return elevator;
         }
 
-        public Vision getVision() {
-                return vision;
-        }
+ 
 
         public Mode getMode() {
                 return mode;
@@ -261,4 +276,11 @@ public class Container {
                 
                 return command;
         }
+
+        public Command getAutonomousCommand() {
+    // This method loads the auto when it is called, however, it is recommended
+    // to first load your paths/autos when code starts, then return the
+    // pre-loaded auto/path
+    return new PathPlannerAuto("New New Auto");
+  }
 }
