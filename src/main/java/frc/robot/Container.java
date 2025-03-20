@@ -67,14 +67,13 @@ public class Container {
 
                 autoFactory = drivetrain.getAutoFactory();
     
-                // Set up bindings
                 setupAutoBindings();
         }
 
         private void setupAutoBindings() {
-                // Bind event markers to commands
                 autoFactory
                     .bind("intake", runIntake())
+                    .bind("L4", runOuttake());
             }
 
         public Drivetrain getDrivetrain() {
