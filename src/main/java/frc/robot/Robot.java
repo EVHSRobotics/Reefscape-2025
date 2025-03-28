@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import choreo.auto.AutoChooser;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
@@ -14,7 +15,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.ButtonBoard.Action;
 import frc.robot.subsystems.Elevator;
-import frc.robot.subsystems.Vision.Camera;
 
 public class Robot extends TimedRobot {
     XboxController controller;
@@ -23,8 +23,10 @@ public class Robot extends TimedRobot {
     Container container;
     Command autonomousCommand;
 
-    StructPublisher<Pose2d> publisher = NetworkTableInstance.getDefault().
-            getStructTopic("Robot Pose", Pose2d.struct).publish();         
+    
+
+   
+            AutoChooser autoChooser;
 
     public Robot() {
         controller = new XboxController(Constants.controllerID);
@@ -32,6 +34,10 @@ public class Robot extends TimedRobot {
 
         container = new Container();
         CommandScheduler.getInstance().cancelAll();
+
+        autoChooser = new AutoChooser();
+
+
     }
 
     @Override
@@ -44,11 +50,9 @@ public class Robot extends TimedRobot {
         CommandScheduler.getInstance().run();
 
         container.getDrivetrain().updateRobotHeight(container.getElevator().getPosition());
-        container.updateRobotPose(container.getVision().getEstimate(Camera.Front));
 
         container.updateLEDs();
 
-        publisher.set(container.getRobotPose());
 
         if (container.getMode() == Container.Mode.Coral) {
             SmartDashboard.putBoolean("Low", container.getCoralLevel() == Elevator.Position.L2_Coral);
@@ -86,20 +90,10 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousInit() {
-        // Initialize the relative pose system
-        container.getDrivetrain().initializeRelativePose();
-        
-        // Get selected autonomous command
-        autonomousCommand = container.getAutonomousCommand();
-        
-        // Schedule the autonomous command
-        if (autonomousCommand != null) {
-            autonomousCommand.schedule();
-        } else {
-            // Fallback to simple leave routine if no auto command is available
-            AutoRoutines.leave(container).schedule();
-        }
-    }
+        CommandScheduler.getInstance().cancelAll();
+                
+        AutoRoutines.left3Coral(container).schedule();
+}
 
     @Override
     public void autonomousPeriodic() {
@@ -127,6 +121,17 @@ public class Robot extends TimedRobot {
     public void teleopPeriodic() {
         container.driveJoysticks(controller.getLeftX(), controller.getLeftY(), controller.getRightX(), controller.getLeftTriggerAxis() > 0.2);
         if (controller.getXButtonPressed()) container.getDrivetrain().seedFieldCentric();
+        if (controller.getXButtonPressed()) container.getDrivetrain().resetQuestNav();
+
+        container.driveJoysticks(
+                        controller.getLeftX(),
+                        controller.getLeftY(),
+                        controller.getRightX(),
+                        controller.getLeftTriggerAxis() > 0.2
+                ).schedule();
+
+        
+
 
         if (board.getButtonPressed(Action.Mode_Coral)) container.modeCoral();
         if (board.getButtonPressed(Action.Mode_Algae)) container.modeAlgae();
@@ -150,4 +155,8 @@ public class Robot extends TimedRobot {
     @Override
     public void testInit() {
         // Cancel all running commands
-        CommandSchedul
+        CommandScheduler.getInstance().cancelAll();
+
+    }
+}
+    

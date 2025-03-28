@@ -1,5 +1,7 @@
 package frc.robot;
 
+import com.google.errorprone.annotations.RestrictedApi;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Quaternion;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -36,7 +38,12 @@ public class QuestNav {
   }
 
   public void setBasePosition(Pose2d basePos){
+    yaw_offset = (float) basePos.getRotation().getDegrees();
     resetPosition = basePos;
+  }
+
+  public Pose2d returnbasePose(){
+    return resetPosition;
   }
 
   // Gets the battery percent of the Quest.
@@ -77,7 +84,7 @@ public class QuestNav {
 
 
   public void resetFullPosition(){
-    zeroHeading();;
+    zeroHeading();
     zeroPosition();
   }
 

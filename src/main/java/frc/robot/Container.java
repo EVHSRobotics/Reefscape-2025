@@ -8,10 +8,12 @@ import com.ctre.phoenix.led.CANdle;
 import com.ctre.phoenix6.Utils;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 
+import choreo.auto.AutoChooser;
 import choreo.auto.AutoFactory;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
@@ -25,11 +27,14 @@ public class Container {
         Elevator elevator;
 
         CANdle lights;
+        
 
         Mode mode;
         Elevator.Position coralLevel, algaeLevel;
 
-        private AutoFactory autoFactory;
+   
+
+
 
 
         public enum Mode {
@@ -38,6 +43,8 @@ public class Container {
         }
 
         public Container() {
+
+
                 drivetrain = new Drivetrain(
                         Constants.Drivetrain.drivetrainConfigs,
 
@@ -47,6 +54,12 @@ public class Container {
                         Constants.Drivetrain.backRightConfigs
                 );
 
+            
+
+
+
+               
+                
                 arm = new Arm(Constants.Arm.pivotID, Constants.Arm.rollersID, Constants.Arm.coralRangeID, Constants.Arm.algaeRangeID);
                 elevator = new Elevator(Constants.Elevator.leftID, Constants.Elevator.rightID, Constants.canivoreID);
 
@@ -65,15 +78,12 @@ public class Container {
                 coralLevel = Elevator.Position.L2_Coral;
                 algaeLevel = Elevator.Position.Low_Algae;
 
-                autoFactory = drivetrain.getAutoFactory();
     
                 setupAutoBindings();
         }
 
         private void setupAutoBindings() {
-                autoFactory
-                    .bind("intake", runIntake())
-                    .bind("L4", runOuttake());
+        drivetrain.bindCommandsAuto("intake", runIntake());
             }
 
         public Drivetrain getDrivetrain() {
@@ -105,15 +115,8 @@ public class Container {
                 return algaeLevel;
         }
 
-        public void updateRobotPose(Pose2d estimate) {
-                if (Utilities.isValidPose(estimate)) drivetrain.addVisionMeasurement(estimate, Utils.fpgaToCurrentTime(Timer.getFPGATimestamp()));
-        }
-
-        public void updateRobotPose(Pose2d[] estimates) {
-                for(Pose2d estimate : estimates) {
-                       updateRobotPose(estimate);
-                }
-        }
+       
+      
 
         public void updateLEDs() {
                 if (mode == Mode.Coral) lights.setLEDs(255, 0, 255);
@@ -276,10 +279,5 @@ public class Container {
                 return command;
         }
 
-        public Command getAutonomousCommand() {
-    // This method loads the auto when it is called, however, it is recommended
-    // to first load your paths/autos when code starts, then return the
-    // pre-loaded auto/path
-    return new PathPlannerAuto("New New Auto");
-  }
+       
 }

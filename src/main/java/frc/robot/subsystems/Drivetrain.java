@@ -1,7 +1,3 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.hardware.CANcoder;
@@ -10,6 +6,7 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrain;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 
+import choreo.Choreo.TrajectoryLogger;
 import choreo.auto.AutoFactory;
 import choreo.trajectory.SwerveSample;
 
@@ -20,30 +17,45 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
+import frc.robot.QuestNav;
 import frc.robot.Utilities;
 
 import java.util.function.Supplier;
 
+
 public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
+
+    private final SwerveRequest.ApplyFieldSpeeds m_pathApplyFieldSpeeds = new SwerveRequest.ApplyFieldSpeeds();
+
+    private final PIDController m_pathXController = new PIDController(10, 0, 0);
+    private final PIDController m_pathYController = new PIDController(10, 0, 0);
+    private final PIDController m_pathThetaController = new PIDController(7, 0, 0);
+
     static Rotation2d redPerspective = Rotation2d.k180deg, bluePerspective = Rotation2d.kZero;
     boolean appliedPerspective = false;
 
     SwerveRequest.FieldCentric fieldCentric;
+        public StructPublisher<Pose2d> publisher2;
+
     AutoFactory autoConfigs;
 
     double percentSpeed;
-    // Initial robot pose - used as the relative origin
-    private Pose2d initialPose = new Pose2d();
-    
-    ChassisSpeeds speed;
+
+    QuestNav questNav = new QuestNav();
+
+    private Pose2d relativePose = new Pose2d();
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfigs, SwerveModuleConstants<?, ?, ?>... modules) {
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfigs, modules);
@@ -52,139 +64,121 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                 .withDeadband(Constants.Drivetrain.maxSpeed * 0.1)
                 .withRotationalDeadband(Constants.Drivetrain.maxAngularSpeed * 0.1)
                 .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
-        
+
         RobotConfig config = null;
         try {
             config = RobotConfig.fromGUISettings();
         } catch (Exception e) {
-            // Handle exception as needed
+
             e.printStackTrace();
         }
-        
-        // Create a supplier for relative robot pose
-        Supplier<Pose2d> relativePoseSupplier = this::getRelativePose;
-        
-        AutoBuilder.configure(
-                relativePoseSupplier, // Use relative pose supplier
-                this::resetRelativePose, // Method to reset odometry with relative poses
-                this::getRobotRelativeSpeeds, 
-                (speeds, feedforwards) -> driveRobotRelative(speeds), 
-                new PPHolonomicDriveController(
-                        new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
-                        new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
-                ),
-                config,
-                () -> {
-                    var alliance = DriverStation.getAlliance();
-                    if (alliance.isPresent()) {
-                        return alliance.get() == DriverStation.Alliance.Red;
-                    }
-                    return false;
-                },
-                this
-        );
-        
+
+        publisher2 = NetworkTableInstance.getDefault()
+      .getStructTopic("Questnav position", Pose2d.struct)
+      .publish();  
+
+        Supplier<Pose2d> relativePoseSupplier = this::getRobotPose;
+
         autoConfigs = new AutoFactory(
                 relativePoseSupplier,
                 this::resetRelativePose,
-                this::followTrajectory,
+                this::followPath,
                 true,
                 this
         );
     }
 
-    /**
-     * Initialize the initial pose as the current robot pose.
-     * Call this method at the start of autonomous to set the relative origin.
-     */
-    public void initializeRelativePose() {
-        initialPose = getRobotPose();
-    }
-    
-    /**
-     * Get the robot pose relative to the initial pose.
-     * 
-     * @return Relative robot pose
-     */
-    public Pose2d getRelativePose() {
-        Pose2d currentPose = getRobotPose();
-        
-        // Calculate position relative to initial pose
-        double relativeX = currentPose.getX() - initialPose.getX();
-        double relativeY = currentPose.getY() - initialPose.getY();
-        Rotation2d relativeRotation = currentPose.getRotation().minus(initialPose.getRotation());
-        
-        return new Pose2d(relativeX, relativeY, relativeRotation);
-    }
-    
-    /**
-     * Reset the relative pose system to treat the provided pose as relative to the current position.
-     * 
-     * @param relativePose The pose to set as the new relative position
-     */
     public void resetRelativePose(Pose2d relativePose) {
-        Pose2d currentPose = getRobotPose();
-        
-        // Update initial pose so that getRelativePose() will return relativePose
-        initialPose = new Pose2d(
-            currentPose.getX() - relativePose.getX(),
-            currentPose.getY() - relativePose.getY(),
-            currentPose.getRotation().minus(relativePose.getRotation())
-        );
+         this.relativePose = relativePose;
+
+       questNav.setBasePosition(relativePose);
     }
 
-    /**
-     * Get the current absolute pose of the robot.
-     * 
-     * @return Current robot pose
-     */
+    public Pose2d getRelativePose(){
+        return questNav.returnbasePose();
+    }
+
     public Pose2d getRobotPose() {
-        Pose2d estimate = getState().Pose;
-        
+        Pose2d estimate = questNav.getPose();
+
         return new Pose2d(
                 estimate.getX(),
                 estimate.getY(),
                 getRotation3d().toRotation2d()
         );
     }
-    
-    /**
-     * Get robot-relative speeds from the drivetrain.
-     * 
-     * @return Robot-relative chassis speeds
-     */
-    public ChassisSpeeds getRobotRelativeSpeeds() {
-        return speed;
+
+    public Command driveSpeeds(ChassisSpeeds speeds) {
+        return driveSpeeds(speeds, false);
+}
+
+
+    public void bindCommandsAuto(String name, Command command){
+        autoConfigs.bind(name, command);
+    }
+
+    public Command driveSpeeds(ChassisSpeeds speeds, boolean slowed) {
+        return run(() -> setControl(speeds, slowed));
+    }
+
+    public AutoFactory createAutoFactory() {
+        return createAutoFactory((sample, isStart) -> {});
     }
 
     /**
-     * Drive the robot with robot-relative chassis speeds.
-     * 
-     * @param speeds Robot-relative chassis speeds
+     * Creates a new auto factory for this drivetrain with the given
+     * trajectory logger.
+     *
+     * @param trajLogger Logger for the trajectory
+     * @return AutoFactory for this drivetrain
      */
-    public void driveRobotRelative(ChassisSpeeds speeds) {
-        this.speed = speeds;
-        this.setControl(new SwerveRequest.RobotCentric()
-                .withVelocityX(speeds.vxMetersPerSecond)
-                .withVelocityY(speeds.vyMetersPerSecond)
-                .withRotationalRate(speeds.omegaRadiansPerSecond));
-    }
+    public AutoFactory createAutoFactory(TrajectoryLogger<SwerveSample> trajLogger) {
+        return  new AutoFactory(
+                ()->getRobotPose(),
+                this::resetRelativePose,
+                this::followPath,
+                true,
+                this
+        );
     
-    /**
-     * Update the robot's speed based on height.
-     * 
-     * @param height Robot height
-     */
+    }
+
+    public void resetQuestNav(){
+        questNav.setBasePosition(new Pose2d());
+    }
+   
+    public Command setZeroSpeed() {
+            
+                        return driveSpeeds(new ChassisSpeeds());
+        }
+
+    public void followPath(SwerveSample sample) {
+        m_pathThetaController.enableContinuousInput(-Math.PI, Math.PI);
+
+        var pose = getRobotPose();
+
+        var targetSpeeds = sample.getChassisSpeeds();
+        targetSpeeds.vxMetersPerSecond += m_pathXController.calculate(
+            pose.getX(), sample.x
+        );
+        targetSpeeds.vyMetersPerSecond += m_pathYController.calculate(
+            pose.getY(), sample.y
+        );
+        targetSpeeds.omegaRadiansPerSecond += m_pathThetaController.calculate(
+            pose.getRotation().getRadians(), sample.heading
+        );
+
+        setControl(
+            m_pathApplyFieldSpeeds.withSpeeds(targetSpeeds)
+                .withWheelForceFeedforwardsX(sample.moduleForcesX())
+                .withWheelForceFeedforwardsY(sample.moduleForcesY())
+        );
+    }
+
     public void updateRobotHeight(double height) {
         percentSpeed = (25 - height) / 25;
     }
 
-    /**
-     * Set control of the drivetrain with field-oriented control.
-     * 
-     * @param speeds Desired chassis speeds
-     * @param slowed Whether to apply speed reduction
-     */
     public void setControl(ChassisSpeeds speeds, boolean slowed) {
         double velocityX = slowed ? speeds.vxMetersPerSecond * percentSpeed : speeds.vxMetersPerSecond;
         double velocityY = slowed ? speeds.vyMetersPerSecond * percentSpeed : speeds.vyMetersPerSecond;
@@ -196,33 +190,17 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         );
     }
 
-    /**
-     * Create a command to drive with specified chassis speeds.
-     * 
-     * @param speeds Desired chassis speeds
-     * @param slowed Whether to apply speed reduction
-     * @return Command to drive with the specified speeds
-     */
-    public Command driveSpeeds(ChassisSpeeds speeds, boolean slowed) {
-        return run(() -> setControl(speeds, slowed));
-    }
+    public Command startTrajectory(String trajectory) {
+        return autoConfigs.resetOdometry(trajectory);
+}
 
-    /**
-     * Follow a trajectory sample from Choreo.
-     * 
-     * @param sample Trajectory sample
-     */
-    public void followTrajectory(SwerveSample sample) {
-        Pose2d robotPose = getRelativePose();
-
-        ChassisSpeeds speeds = new ChassisSpeeds(
-                sample.vx + Constants.Drivetrain.translationPID.calculate(robotPose.getX(), sample.x),
-                sample.vy + Constants.Drivetrain.translationPID.calculate(robotPose.getY(), sample.y),
-                sample.omega + Constants.Drivetrain.translationPID.calculate(Utilities.getRadians(robotPose), sample.heading)
+public Command followTrajectory(String trajectory) {
+        return Commands.sequence(
+                autoConfigs.trajectoryCmd(trajectory),
+                driveSpeeds(new ChassisSpeeds())
         );
+}
 
-        setControl(speeds, false);
-    }
 
     @Override
     public void periodic() {
@@ -235,5 +213,8 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                 appliedPerspective = true;
             });
         }
+
+        publisher2.set(getRobotPose());
+
     }
 }
