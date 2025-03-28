@@ -1,10 +1,25 @@
 {
- "name":"config",
+ "name":"configs",
  "version":1,
  "type":"Swerve",
  "variables":{
   "expressions":{},
-  "poses":{}
+  "poses":{
+   "IntakePosition":{
+    "x":{
+     "exp":"1.6327558755874634 m",
+     "val":1.6327558755874634
+    },
+    "y":{
+     "exp":"7.382403373718262 m",
+     "val":7.382403373718262
+    },
+    "heading":{
+     "exp":"-0.9380477967363064 rad",
+     "val":-0.9380477967363064
+    }
+   }
+  }
  },
  "config":{
   "frontLeft":{
@@ -23,8 +38,8 @@
     "val":-0.320675
    },
    "y":{
-    "exp":"-11.3125 in",
-    "val":-0.28733749999999997
+    "exp":"-11.325 in",
+    "val":-0.287655
    }
   },
   "mass":{
@@ -68,6 +83,10 @@
     "exp":"19.25 in",
     "val":0.48895
    }
+  },
+  "differentialTrackWidth":{
+   "exp":"22 in",
+   "val":0.5588
   }
  },
  "generationFeatures":[]
