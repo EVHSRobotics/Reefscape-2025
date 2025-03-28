@@ -13,6 +13,7 @@ import choreo.trajectory.SwerveSample;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
@@ -43,6 +44,11 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     private final PIDController m_pathYController = new PIDController(10, 0, 0);
     private final PIDController m_pathThetaController = new PIDController(7, 0, 0);
 
+    private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
+    private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
+
+
+
     static Rotation2d redPerspective = Rotation2d.k180deg, bluePerspective = Rotation2d.kZero;
     boolean appliedPerspective = false;
 
@@ -56,9 +62,19 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     QuestNav questNav = new QuestNav();
 
     private Pose2d relativePose = new Pose2d();
+    
+
+    ChassisSpeeds questNavSpeed = new ChassisSpeeds();
+    private Pose2d poseforSpeedCalc = new Pose2d();
+    private double lastUpdateTime = 0;
+
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfigs, SwerveModuleConstants<?, ?, ?>... modules) {
+
+        
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfigs, modules);
+
+        
 
         fieldCentric = new SwerveRequest.FieldCentric()
                 .withDeadband(Constants.Drivetrain.maxSpeed * 0.1)
@@ -73,23 +89,42 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
             e.printStackTrace();
         }
 
-        publisher2 = NetworkTableInstance.getDefault()
-      .getStructTopic("Questnav position", Pose2d.struct)
-      .publish();  
+    AutoBuilder.configure(
+            this::getRobotPose, // Robot pose supplier
+            this::resetRelativePose, // Method to reset odometry (will be called if your auto has a starting pose)
+            this::getStateSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+            (speeds, feedforwards) -> setControl(
+                m_pathApplyRobotSpeeds.withSpeeds(speeds)
+                    .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
+                    .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())
+            ), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+            new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
+                    new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
+                    new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
+            ),
+            config, // The robot configuration
+            () -> {
+              // Boolean supplier that controls when the path will be mirrored for the red alliance
+              // This will flip the path being followed to the red side of the field.
+              // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
 
-        Supplier<Pose2d> relativePoseSupplier = this::getRobotPose;
+              var alliance = DriverStation.getAlliance();
+              if (alliance.isPresent()) {
+                return alliance.get() == DriverStation.Alliance.Red;
+              }
+              return false;
+            },
+            this // Reference to this subsystem to set requirements
+    );
+  }
+    
 
-        autoConfigs = new AutoFactory(
-                relativePoseSupplier,
-                this::resetRelativePose,
-                this::followPath,
-                true,
-                this
-        );
+    public ChassisSpeeds getStateSpeeds(){
+        return getState().Speeds;
     }
 
-    public void resetRelativePose(Pose2d relativePose) {
-         this.relativePose = relativePose;
+    public void resetRelativePose(Pose2d basePose) {
+         relativePose = basePose;
 
        questNav.setBasePosition(relativePose);
     }
@@ -111,6 +146,10 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     public Command driveSpeeds(ChassisSpeeds speeds) {
         return driveSpeeds(speeds, false);
 }
+
+  public PathPlannerAuto getAutoPath(String pathName) {
+        return new PathPlannerAuto(pathName);
+    }
 
 
     public void bindCommandsAuto(String name, Command command){
@@ -190,20 +229,42 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         );
     }
 
-    public Command startTrajectory(String trajectory) {
-        return autoConfigs.resetOdometry(trajectory);
+  
+
+public void calculateQuestNavSpeeds(){
+    double currentTime = System.currentTimeMillis() / 1000.0;
+    
+    Pose2d pose = questNav.getPose();
+    double dt = currentTime - lastUpdateTime;
+    
+    // Calculate velocities
+    double vx = (pose.getX() - poseforSpeedCalc.getX()) / dt;
+    double vy = (pose.getY() - poseforSpeedCalc.getY()) / dt;
+    double omega = (pose.getRotation().getRadians() - poseforSpeedCalc.getRotation().getRadians()) / dt;
+    
+    // Update cache
+    questNavSpeed = new ChassisSpeeds(vx, vy, omega);
+    
+    // Update stored values
+
+    poseforSpeedCalc = getRobotPose();
+
+    lastUpdateTime = currentTime; 
 }
 
-public Command followTrajectory(String trajectory) {
-        return Commands.sequence(
-                autoConfigs.trajectoryCmd(trajectory),
-                driveSpeeds(new ChassisSpeeds())
-        );
+public ChassisSpeeds getQuestNavSpeeds(){
+    
+
+    return questNavSpeed;
+    
 }
 
 
     @Override
     public void periodic() {
+
+        calculateQuestNavSpeeds();
+
         if (!appliedPerspective || DriverStation.isDisabled()) {
             DriverStation.getAlliance().ifPresent(allianceColor -> {
                 setOperatorPerspectiveForward(

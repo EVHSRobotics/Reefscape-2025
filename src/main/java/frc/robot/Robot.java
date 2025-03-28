@@ -91,8 +91,13 @@ public class Robot extends TimedRobot {
     @Override
     public void autonomousInit() {
         CommandScheduler.getInstance().cancelAll();
-                
-        AutoRoutines.left3Coral(container).schedule();
+    
+        // Get selected auto command from container
+        autonomousCommand = container.getAutonomousCommand();
+        
+        if (autonomousCommand != null) {
+            autonomousCommand.schedule();
+        }
 }
 
     @Override
