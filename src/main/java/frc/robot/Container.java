@@ -46,7 +46,8 @@ public class Container {
 
         public enum AutoPaths {
                 // Define your Reefscape auto paths
-                LeftCoral("Left_3_coral");
+                LeftCoral("Left_3_coral"),
+                Test("test");
 
                 private String pathName;
 
@@ -61,7 +62,8 @@ public class Container {
 
         public Container() {
 
-
+                
+                setUpAutoCommands();
 
                 drivetrain = new Drivetrain(
                                 Constants.Drivetrain.drivetrainConfigs,
@@ -91,19 +93,20 @@ public class Container {
                 algaeLevel = Elevator.Position.Low_Algae;
 
                 autoChooser = new SendableChooser<String>();
-    commandChooser = new HashMap<String, Command>();
-    
-    // Add auto options
-    AutoPaths[] allAutoPaths = AutoPaths.values();
-    for (int i=0; i<allAutoPaths.length; i++) {
-        commandChooser.put(allAutoPaths[i].getPath(), drivetrain.getAutoPath(allAutoPaths[i].getPath()));
-        autoChooser.addOption(allAutoPaths[i].getPath(), allAutoPaths[i].getPath());
-    }
-    
-    SmartDashboard.putData(autoChooser);
-    
-    // Set up auto commands
-    setUpAutoCommands();
+                commandChooser = new HashMap<String, Command>();
+
+                // Add auto options
+                AutoPaths[] allAutoPaths = AutoPaths.values();
+                for (int i = 0; i < allAutoPaths.length; i++) {
+                        commandChooser.put(allAutoPaths[i].getPath(),
+                                        drivetrain.getAutoPath(allAutoPaths[i].getPath()));
+                        autoChooser.addOption(allAutoPaths[i].getPath(), allAutoPaths[i].getPath());
+                }
+
+                SmartDashboard.putData(autoChooser);
+
+                NamedCommands.registerCommand("intake", runIntake());
+                NamedCommands.registerCommand("outake", runOuttake());
 
                 setupAutoBindings();
         }
@@ -113,11 +116,9 @@ public class Container {
         }
 
         public void setUpAutoCommands() {
-                HashMap<String, Command> eventMap = new HashMap<String, Command>();
+                NamedCommands.registerCommand("intake", runIntake());
+                NamedCommands.registerCommand("outake", runOuttake());
 
-                eventMap.put("intakeCoral", runCoralIntake());
-
-                NamedCommands.registerCommands(eventMap);
         }
 
         public Drivetrain getDrivetrain() {
@@ -218,22 +219,6 @@ public class Container {
                 return command;
         }
 
-        public Command runCoralIntake() {
-                Command command = Commands.sequence(
-                                arm.setPosition(Arm.Position.Stow),
-                                elevator.setPosition(Elevator.Position.Stow),
-                                Commands.parallel(
-                                                arm.setPosition(Arm.Position.Intake_Coral),
-                                                arm.intakeCoral()),
-                                arm.setPosition(Arm.Position.Stow)
-
-                )
-                                .withInterruptBehavior(InterruptionBehavior.kCancelSelf);
-                command.addRequirements(arm, elevator);
-
-                return command;
-        }
-
         public Command runIntake() {
                 Command command = Commands.sequence(
                                 arm.setPosition(Arm.Position.Stow),
@@ -315,5 +300,5 @@ public class Container {
 
         public Command getAutonomousCommand() {
                 return commandChooser.get(autoChooser.getSelected());
-            }
+        }
 }

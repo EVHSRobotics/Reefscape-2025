@@ -147,8 +147,8 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         return driveSpeeds(speeds, false);
 }
 
-  public PathPlannerAuto getAutoPath(String pathName) {
-        return new PathPlannerAuto(pathName);
+  public PathPlannerAuto getAutoPath(String autoName) {
+        return new PathPlannerAuto(autoName);
     }
 
 
