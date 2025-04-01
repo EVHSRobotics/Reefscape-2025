@@ -7,7 +7,6 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 
 import choreo.Choreo.TrajectoryLogger;
-import choreo.auto.AutoFactory;
 import choreo.trajectory.SwerveSample;
 
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
@@ -21,11 +20,15 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
@@ -40,28 +43,29 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     private final SwerveRequest.ApplyFieldSpeeds m_pathApplyFieldSpeeds = new SwerveRequest.ApplyFieldSpeeds();
 
-    private final PIDController m_pathXController = new PIDController(10, 0, 0);
-    private final PIDController m_pathYController = new PIDController(10, 0, 0);
-    private final PIDController m_pathThetaController = new PIDController(7, 0, 0);
 
+   
     private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
     private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
 
 
 
-    static Rotation2d redPerspective = Rotation2d.k180deg, bluePerspective = Rotation2d.kZero;
+    static Rotation2d redPerspective = Rotation2d.k180deg;
+    static Rotation2d bluePerspective = Rotation2d.kZero;
     boolean appliedPerspective = false;
 
     SwerveRequest.FieldCentric fieldCentric;
-        public StructPublisher<Pose2d> publisher2;
 
-    AutoFactory autoConfigs;
+   
+
+
 
     double percentSpeed;
 
     QuestNav questNav = new QuestNav();
 
-    private Pose2d relativePose = new Pose2d();
+    private Pose2d basePose2d = new Pose2d();
+    private Transform2d transformer = new Transform2d();
     
 
     ChassisSpeeds questNavSpeed = new ChassisSpeeds();
@@ -71,10 +75,13 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfigs, SwerveModuleConstants<?, ?, ?>... modules) {
 
+
         
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfigs, modules);
 
-        
+    
+
+
 
         fieldCentric = new SwerveRequest.FieldCentric()
                 .withDeadband(Constants.Drivetrain.maxSpeed * 0.1)
@@ -91,16 +98,16 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     AutoBuilder.configure(
             this::getRobotPose, // Robot pose supplier
-            this::resetRelativePose, // Method to reset odometry (will be called if your auto has a starting pose)
+            this::setCurrentPose, // Method to reset odometry (will be called if your auto has a starting pose)
             this::getStateSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             (speeds, feedforwards) -> setControl(
-                m_pathApplyRobotSpeeds.withSpeeds(speeds)
+                m_pathApplyRobotSpeeds.withSpeeds(new ChassisSpeeds(speeds.vxMetersPerSecond*-1, speeds.vyMetersPerSecond*-1, speeds.omegaRadiansPerSecond*-1))
                     .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
                     .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())
             ), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
             new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
-                    new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
-                    new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
+                    new PIDConstants(10.0, 0.0, 0.0), // Translation PID constants
+                    new PIDConstants(7.0, 0.0, 0.0) // Rotation PID constants
             ),
             config, // The robot configuration
             () -> {
@@ -120,28 +127,29 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     
 
     public ChassisSpeeds getStateSpeeds(){
-        return getState().Speeds;
+        ChassisSpeeds speed =  getStateSpeeds();
+        return new ChassisSpeeds(speed.vxMetersPerSecond * -1
+        , speed.vyMetersPerSecond *
+        -1, speed.omegaRadiansPerSecond);
     }
 
-    public void resetRelativePose(Pose2d basePose) {
-         relativePose = basePose;
-
-       questNav.setBasePosition(relativePose);
+    public void setCurrentPose(Pose2d currentPose){
+        transformer = currentPose.minus(questNav.getPose());
+        resetPose(currentPose);
+         resetRotation(currentPose.getRotation());
+        
     }
 
-    public Pose2d getRelativePose(){
-        return questNav.returnbasePose();
-    }
+   
+
 
     public Pose2d getRobotPose() {
         Pose2d estimate = questNav.getPose();
-
-        return new Pose2d(
-                estimate.getX(),
-                estimate.getY(),
-                getRotation3d().toRotation2d()
-        );
+        return new Pose2d(estimate.plus(transformer).getTranslation(), getState().Pose.getRotation());
     }
+
+
+
 
     public Command driveSpeeds(ChassisSpeeds speeds) {
         return driveSpeeds(speeds, false);
@@ -152,17 +160,13 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
 
-    public void bindCommandsAuto(String name, Command command){
-        autoConfigs.bind(name, command);
-    }
+   
 
     public Command driveSpeeds(ChassisSpeeds speeds, boolean slowed) {
         return run(() -> setControl(speeds, slowed));
     }
 
-    public AutoFactory createAutoFactory() {
-        return createAutoFactory((sample, isStart) -> {});
-    }
+   
 
     /**
      * Creates a new auto factory for this drivetrain with the given
@@ -171,19 +175,9 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
      * @param trajLogger Logger for the trajectory
      * @return AutoFactory for this drivetrain
      */
-    public AutoFactory createAutoFactory(TrajectoryLogger<SwerveSample> trajLogger) {
-        return  new AutoFactory(
-                ()->getRobotPose(),
-                this::resetRelativePose,
-                this::followPath,
-                true,
-                this
-        );
-    
-    }
-
-    public void resetQuestNav(){
-        questNav.setBasePosition(new Pose2d());
+   
+    public void zeroPosition(){
+        resetPose(new Pose2d());
     }
    
     public Command setZeroSpeed() {
@@ -191,29 +185,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                         return driveSpeeds(new ChassisSpeeds());
         }
 
-    public void followPath(SwerveSample sample) {
-        m_pathThetaController.enableContinuousInput(-Math.PI, Math.PI);
-
-        var pose = getRobotPose();
-
-        var targetSpeeds = sample.getChassisSpeeds();
-        targetSpeeds.vxMetersPerSecond += m_pathXController.calculate(
-            pose.getX(), sample.x
-        );
-        targetSpeeds.vyMetersPerSecond += m_pathYController.calculate(
-            pose.getY(), sample.y
-        );
-        targetSpeeds.omegaRadiansPerSecond += m_pathThetaController.calculate(
-            pose.getRotation().getRadians(), sample.heading
-        );
-
-        setControl(
-            m_pathApplyFieldSpeeds.withSpeeds(targetSpeeds)
-                .withWheelForceFeedforwardsX(sample.moduleForcesX())
-                .withWheelForceFeedforwardsY(sample.moduleForcesY())
-        );
-    }
-
+    
     public void updateRobotHeight(double height) {
         percentSpeed = (25 - height) / 25;
     }
@@ -240,10 +212,9 @@ public void calculateQuestNavSpeeds(){
     // Calculate velocities
     double vx = (pose.getX() - poseforSpeedCalc.getX()) / dt;
     double vy = (pose.getY() - poseforSpeedCalc.getY()) / dt;
-    double omega = (pose.getRotation().getRadians() - poseforSpeedCalc.getRotation().getRadians()) / dt;
     
     // Update cache
-    questNavSpeed = new ChassisSpeeds(vx, vy, omega);
+    questNavSpeed = new ChassisSpeeds(vx, vy, getState().Speeds.omegaRadiansPerSecond );
     
     // Update stored values
 
@@ -252,11 +223,18 @@ public void calculateQuestNavSpeeds(){
     lastUpdateTime = currentTime; 
 }
 
-public ChassisSpeeds getQuestNavSpeeds(){
-    
 
+public ChassisSpeeds getQuestNavSpeeds(){
+     calculateQuestNavSpeeds();
     return questNavSpeed;
     
+}
+
+public Pose2d getBasePose2d(){
+    return basePose2d;
+}
+public Pose2d getQuestNavRegularPose(){
+    return questNav.getQuestNavPose();
 }
 
 
@@ -275,7 +253,13 @@ public ChassisSpeeds getQuestNavSpeeds(){
             });
         }
 
-        publisher2.set(getRobotPose());
+      
+        
+
+        SmartDashboard.putNumber("XX SPED", getQuestNavSpeeds().vxMetersPerSecond);
+        SmartDashboard.putNumber("YY SPEED", getQuestNavSpeeds().vyMetersPerSecond);
+        SmartDashboard.updateValues();
+
 
     }
 }

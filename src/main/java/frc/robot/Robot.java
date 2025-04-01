@@ -6,6 +6,8 @@ package frc.robot;
 
 import choreo.auto.AutoChooser;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -28,6 +30,19 @@ public class Robot extends TimedRobot {
    
             AutoChooser autoChooser;
 
+             StructPublisher<Pose2d> robotPublisher = NetworkTableInstance.getDefault()
+    .getStructTopic("Robot Pose", Pose2d.struct).publish();
+
+    StructPublisher<Pose2d> basePublisher = NetworkTableInstance.getDefault()
+    .getStructTopic("Base Pose", Pose2d.struct).publish();
+
+    StructPublisher<ChassisSpeeds> speedPublisher = NetworkTableInstance.getDefault()
+.getStructTopic("MyStates", ChassisSpeeds.struct).publish();
+
+
+
+
+
     public Robot() {
         controller = new XboxController(Constants.controllerID);
         board = new ButtonBoard(Constants.boardID);
@@ -47,6 +62,12 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotPeriodic() {
+
+
+        robotPublisher.set(container.getDrivetrain().getRobotPose());
+        basePublisher.set(container.getDrivetrain().getBasePose2d());
+        speedPublisher.set(container.getDrivetrain().getQuestNavSpeeds());
+
         CommandScheduler.getInstance().run();
 
         container.getDrivetrain().updateRobotHeight(container.getElevator().getPosition());
@@ -70,11 +91,8 @@ public class Robot extends TimedRobot {
         SmartDashboard.putBoolean("Has Algae", container.getArm().hasAlgae());
 
         // Display relative pose
-        Pose2d relativePose = container.getDrivetrain().getRelativePose();
-        SmartDashboard.putNumber("Relative X", relativePose.getX());
-        SmartDashboard.putNumber("Relative Y", relativePose.getY());
-        SmartDashboard.putNumber("Relative Angle", relativePose.getRotation().getDegrees());
 
+       
         SmartDashboard.updateValues();
     }
 
@@ -125,8 +143,11 @@ public class Robot extends TimedRobot {
     @Override
     public void teleopPeriodic() {
         container.driveJoysticks(controller.getLeftX(), controller.getLeftY(), controller.getRightX(), controller.getLeftTriggerAxis() > 0.2);
-        if (controller.getXButtonPressed()) container.getDrivetrain().seedFieldCentric();
-        if (controller.getXButtonPressed()) container.getDrivetrain().resetQuestNav();
+        if (controller.getXButtonPressed()){
+         container.getDrivetrain().seedFieldCentric();
+         container.getDrivetrain().setCurrentPose(new Pose2d(1,1, new Rotation2d()));
+        } 
+
 
         container.driveJoysticks(
                         controller.getLeftX(),

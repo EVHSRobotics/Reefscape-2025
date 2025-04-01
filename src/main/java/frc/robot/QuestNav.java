@@ -34,7 +34,8 @@ public class QuestNav {
 
   // Gets the Quest's measured position.
   public Pose2d getPose() {
-    return new Pose2d(getQuestNavPose().minus(resetPosition).getTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
+    return getQuestNavPose();
+   // return new Pose2d(getQuestNavPose().minus(resetPosition).getTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
   }
 
   public void setBasePosition(Pose2d basePos){
@@ -112,7 +113,7 @@ public class QuestNav {
   }
 
 
-  private Pose2d getQuestNavPose() {
+  public Pose2d getQuestNavPose() {
     var oculousPositionCompensated = getQuestNavTranslation().minus(new Translation2d(0, 0.1651)); // 6.5
     return new Pose2d(oculousPositionCompensated, Rotation2d.fromDegrees(getOculusYaw()));
   }

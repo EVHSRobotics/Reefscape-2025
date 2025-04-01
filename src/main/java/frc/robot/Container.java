@@ -63,7 +63,6 @@ public class Container {
         public Container() {
 
                 
-                setUpAutoCommands();
 
                 drivetrain = new Drivetrain(
                                 Constants.Drivetrain.drivetrainConfigs,
@@ -104,16 +103,9 @@ public class Container {
                 }
 
                 SmartDashboard.putData(autoChooser);
-
-                NamedCommands.registerCommand("intake", runIntake());
-                NamedCommands.registerCommand("outake", runOuttake());
-
-                setupAutoBindings();
+                setUpAutoCommands();
         }
 
-        private void setupAutoBindings() {
-                drivetrain.bindCommandsAuto("intake", runIntake());
-        }
 
         public void setUpAutoCommands() {
                 NamedCommands.registerCommand("intake", runIntake());
