@@ -163,7 +163,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
    
 
     public Command driveSpeeds(ChassisSpeeds speeds, boolean slowed) {
-        return run(() -> setControl(speeds, slowed));
+        return run(() -> setControl(speeds, slowed)).until(() -> true);
     }
 
    

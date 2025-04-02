@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.ButtonBoard.Action;
 import frc.robot.subsystems.Elevator;
 
@@ -22,7 +23,7 @@ public class Robot extends TimedRobot {
     XboxController controller;
     ButtonBoard board;
 
-    Container container;
+    RobotContainer container;
     Command autonomousCommand;
 
     
@@ -47,7 +48,7 @@ public class Robot extends TimedRobot {
         controller = new XboxController(Constants.controllerID);
         board = new ButtonBoard(Constants.boardID);
 
-        container = new Container();
+        container = new RobotContainer();
         CommandScheduler.getInstance().cancelAll();
 
         autoChooser = new AutoChooser();
@@ -75,7 +76,7 @@ public class Robot extends TimedRobot {
         container.updateLEDs();
 
 
-        if (container.getMode() == Container.Mode.Coral) {
+        if (container.getMode() == RobotContainer.Mode.Coral) {
             SmartDashboard.putBoolean("Low", container.getCoralLevel() == Elevator.Position.L2_Coral);
             SmartDashboard.putBoolean("Medium", container.getCoralLevel() == Elevator.Position.L3_Coral);
             SmartDashboard.putBoolean("High", container.getCoralLevel() == Elevator.Position.L4_Coral);
@@ -108,6 +109,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousInit() {
+        container.getDrivetrain().seedFieldCentric();
         CommandScheduler.getInstance().cancelAll();
     
         // Get selected auto command from container
@@ -159,8 +161,16 @@ public class Robot extends TimedRobot {
         
 
 
-        if (board.getButtonPressed(Action.Mode_Coral)) container.modeCoral();
-        if (board.getButtonPressed(Action.Mode_Algae)) container.modeAlgae();
+        if (board.getButtonPressed(Action.Mode_Coral)) 
+        {
+            container.modeCoral();
+            CommandScheduler.getInstance().cancelAll();
+        }
+        if (board.getButtonPressed(Action.Mode_Algae))
+        {
+            container.modeAlgae();
+            CommandScheduler.getInstance().cancelAll();
+        } 
 
         if (controller.getAButtonPressed()) container.stow().schedule();
         if (controller.getYButtonPressed()) container.climb().schedule();
@@ -183,6 +193,15 @@ public class Robot extends TimedRobot {
         // Cancel all running commands
         CommandScheduler.getInstance().cancelAll();
 
+    }
+
+    public static Command Center_l4(RobotContainer container){
+        return Commands.sequence(
+            container.getDrivetrain().driveSpeeds(new ChassisSpeeds(1,0,0)),
+            Commands.waitSeconds(3),
+            container.getDrivetrain().driveSpeeds(new ChassisSpeeds()),
+            container.runAutoOuttake()
+        );
     }
 }
     

@@ -26,7 +26,7 @@ import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Arm;
 
-public class Container {
+public class RobotContainer {
         Drivetrain drivetrain;
         Arm arm;
         Elevator elevator;
@@ -60,7 +60,7 @@ public class Container {
                 }
         }
 
-        public Container() {
+        public RobotContainer() {
 
                 
 
@@ -109,7 +109,7 @@ public class Container {
 
         public void setUpAutoCommands() {
                 NamedCommands.registerCommand("intake", runIntake());
-                NamedCommands.registerCommand("outake", runOuttake());
+                NamedCommands.registerCommand("outake", runAutoOuttake());
 
         }
 
@@ -198,13 +198,19 @@ public class Container {
         }
 
         public Command stow() {
-                Command command = Commands.sequence(
-                                Commands.either(
-                                                arm.setPosition(Arm.Position.Processor),
-                                                arm.setPosition(Arm.Position.Stow),
 
-                                                () -> arm.hasAlgae()),
-                                elevator.setPosition(Elevator.Position.Stow))
+                                Command command = Commands.either(
+                                        Commands.sequence(
+                                                arm.setPosition(Arm.Position.Processor),
+                                                elevator.setPosition(Elevator.Position.Low_Algae)
+                                        ),
+
+                                        Commands.sequence(
+                                                arm.setPosition(Arm.Position.Stow),
+                                                elevator.setPosition(Elevator.Position.Stow)
+                                        ),
+
+                                                () -> arm.hasAlgae())
                                 .withInterruptBehavior(InterruptionBehavior.kCancelIncoming);
                 command.addRequirements(arm, elevator);
 
@@ -288,6 +294,24 @@ public class Container {
                 command.addRequirements(arm, elevator);
 
                 return command;
+        }
+
+        public Command runAutoOuttake(){
+                Command command = Commands.sequence(
+                        arm.setPosition(Arm.Position.Stow),
+                        elevator.setPosition(Elevator.Position.L4_Coral),
+                        arm.setPosition(Arm.Position.L4_Coral),
+                        Commands.waitSeconds(0.3),
+                        arm.outtakeCoral(),
+                        arm.setPosition(Arm.Position.Stow),
+                        elevator.setPosition(Elevator.Position.Stow)
+                ).withInterruptBehavior(InterruptionBehavior.kCancelSelf);
+
+                command.addRequirements(arm,elevator);
+
+                return command;
+
+                
         }
 
         public Command getAutonomousCommand() {
