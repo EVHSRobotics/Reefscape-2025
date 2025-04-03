@@ -1,10 +1,9 @@
 package frc.robot;
 
-import com.google.errorprone.annotations.RestrictedApi;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Quaternion;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.FloatArraySubscriber;
@@ -13,6 +12,7 @@ import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class QuestNav {
   // Configure Network Tables topics (questnav/...) to communicate with the Quest HMD
@@ -31,21 +31,64 @@ public class QuestNav {
   // Local heading helper variables
   private float yaw_offset = 0.0f;
   private Pose2d resetPosition = new Pose2d();
+  
+  // Quest offset from robot center (to be calibrated)
+  private Translation2d questOffset = new Translation2d(0, 0.1651); // Default offset, will be calibrated
 
   // Gets the Quest's measured position.
   public Pose2d getPose() {
-    return getQuestNavPose();
-   // return new Pose2d(getQuestNavPose().minus(resetPosition).getTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
+    Pose2d rawQuestPose = getQuestNavPose();
+    // Apply the transformer to get robot center pose (compensating for offset)
+    return compensateForQuestOffset(rawQuestPose);
   }
 
-  public void setBasePosition(Pose2d basePos){
-    yaw_offset = (float) basePos.getRotation().getDegrees();
-    resetPosition = basePos;
+  private Pose2d compensateForQuestOffset(Pose2d questPose) {
+    Translation2d rotatedOffset = questOffset.rotateBy(questPose.getRotation());
+    
+    Translation2d robotCenter = questPose.getTranslation().minus(rotatedOffset);
+    
+    return new Pose2d(robotCenter, questPose.getRotation());
   }
 
-  public Pose2d returnbasePose(){
-    return resetPosition;
+
+  public void calibrateQuestOffset(Pose2d pose1, Pose2d pose2) {
+    double angleDiff = Math.abs(pose1.getRotation().minus(pose2.getRotation()).getDegrees());
+    if (angleDiff < 20) {
+
+    
+    
+    Rotation2d rotationDiff = pose2.getRotation().minus(pose1.getRotation());
+    
+    Translation2d trans1 = pose1.getTranslation();
+    Translation2d trans2 = pose2.getTranslation();
+    
+    Translation2d relativeMovement = trans2.minus(trans1);
+    
+    double d = rotationDiff.getRadians();
+    
+    if (Math.abs(d) < 0.01) {
+    
+    double offsetMagnitude = relativeMovement.getNorm() / (2 * Math.sin(d/2));
+    
+    Rotation2d offsetDir = new Rotation2d(relativeMovement.getY(), -relativeMovement.getX());
+    offsetDir = offsetDir.plus(new Rotation2d(Math.PI/2)); 
+    
+    this.questOffset = new Translation2d(
+        offsetMagnitude * offsetDir.getCos(),
+        offsetMagnitude * offsetDir.getSin());
+    
+    SmartDashboard.putNumber("Quest offset x ", this.questOffset.getX());
+    SmartDashboard.putNumber("Quest offset y ", this.questOffset.getY());
+  }}
+
   }
+
+  public Translation2d getQuestOffset() {
+    return questOffset;
+  }
+
+
+
 
   // Gets the battery percent of the Quest.
   public double getBatteryPercent() {
@@ -82,8 +125,6 @@ public class QuestNav {
     }
   }
 
-
-
   public void resetFullPosition(){
     zeroHeading();
     zeroPosition();
@@ -112,9 +153,10 @@ public class QuestNav {
     return new Translation2d(questnavPosition[2], -questnavPosition[0]);
   }
 
-
   public Pose2d getQuestNavPose() {
-    var oculousPositionCompensated = getQuestNavTranslation().minus(new Translation2d(0, 0.1651)); // 6.5
-    return new Pose2d(oculousPositionCompensated, Rotation2d.fromDegrees(getOculusYaw()));
+    // Get raw Quest position without offset compensation
+    var rawQuestPosition = getQuestNavTranslation();
+    // Note: This is just the raw reading, without compensating for the offset
+    return new Pose2d(rawQuestPosition, Rotation2d.fromDegrees(getOculusYaw()));
   }
 }

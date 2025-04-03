@@ -21,6 +21,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -42,23 +43,15 @@ import java.util.function.Supplier;
 public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
 
     private final SwerveRequest.ApplyFieldSpeeds m_pathApplyFieldSpeeds = new SwerveRequest.ApplyFieldSpeeds();
-
-
    
     private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
     private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
-
-
 
     static Rotation2d redPerspective = Rotation2d.k180deg;
     static Rotation2d bluePerspective = Rotation2d.kZero;
     boolean appliedPerspective = false;
 
     SwerveRequest.FieldCentric fieldCentric;
-
-   
-
-
 
     double percentSpeed;
 
@@ -67,21 +60,14 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     private Pose2d basePose2d = new Pose2d();
     private Transform2d transformer = new Transform2d();
     
-
     ChassisSpeeds questNavSpeed = new ChassisSpeeds();
     private Pose2d poseforSpeedCalc = new Pose2d();
     private double lastUpdateTime = 0;
 
 
     public Drivetrain(SwerveDrivetrainConstants drivetrainConfigs, SwerveModuleConstants<?, ?, ?>... modules) {
-
-
         
         super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfigs, modules);
-
-    
-
-
 
         fieldCentric = new SwerveRequest.FieldCentric()
                 .withDeadband(Constants.Drivetrain.maxSpeed * 0.1)
@@ -92,100 +78,97 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         try {
             config = RobotConfig.fromGUISettings();
         } catch (Exception e) {
-
             e.printStackTrace();
         }
 
-    AutoBuilder.configure(
-            this::getRobotPose, // Robot pose supplier
-            this::setCurrentPose, // Method to reset odometry (will be called if your auto has a starting pose)
-            this::getStateSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-            (speeds, feedforwards) -> setControl(
-                m_pathApplyRobotSpeeds.withSpeeds(new ChassisSpeeds(speeds.vxMetersPerSecond*-1, speeds.vyMetersPerSecond*-1, speeds.omegaRadiansPerSecond*-1))
-                    .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
-                    .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())
-            ), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
-            new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
-                    new PIDConstants(10.0, 0.0, 0.0), // Translation PID constants
-                    new PIDConstants(7.0, 0.0, 0.0) // Rotation PID constants
-            ),
-            config, // The robot configuration
-            () -> {
-              // Boolean supplier that controls when the path will be mirrored for the red alliance
-              // This will flip the path being followed to the red side of the field.
-              // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+        AutoBuilder.configure(
+                this::getRobotPose, // Robot pose supplier
+                this::setCurrentPose, // Method to reset odometry (will be called if your auto has a starting pose)
+                this::getQuestNavSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+                (speeds, feedforwards) -> setControl(
+                    m_pathApplyRobotSpeeds.withSpeeds(new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, speeds.omegaRadiansPerSecond))
+                        .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
+                        .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())
+                ), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+                new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
+                        new PIDConstants(10.0, 0.0, 0.0), // Translation PID constants
+                        new PIDConstants(7.0, 0.0, 0.0) // Rotation PID constants
+                ),
+                config, // The robot configuration
+                () -> {
+                  // Boolean supplier that controls when the path will be mirrored for the red alliance
+                  // This will flip the path being followed to the red side of the field.
+                  // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
 
-              var alliance = DriverStation.getAlliance();
-              if (alliance.isPresent()) {
-                return alliance.get() == DriverStation.Alliance.Red;
-              }
-              return false;
-            },
-            this // Reference to this subsystem to set requirements
-    );
-  }
+                  var alliance = DriverStation.getAlliance();
+                  if (alliance.isPresent()) {
+                    return alliance.get() == DriverStation.Alliance.Red;
+                  }
+                  return false;
+                },
+                this // Reference to this subsystem to set requirements
+        );
+    }
     
-
     public ChassisSpeeds getStateSpeeds(){
-        ChassisSpeeds speed =  getStateSpeeds();
-        return new ChassisSpeeds(speed.vxMetersPerSecond * -1
-        , speed.vyMetersPerSecond *
-        -1, speed.omegaRadiansPerSecond);
+        ChassisSpeeds speed = getStateSpeeds();
+        return new ChassisSpeeds(speed.vxMetersPerSecond * -1, 
+                                speed.vyMetersPerSecond * -1, 
+                                speed.omegaRadiansPerSecond);
     }
 
-    public void setCurrentPose(Pose2d currentPose){
-        transformer = currentPose.minus(questNav.getPose());
-        resetPose(currentPose);
-         resetRotation(currentPose.getRotation());
+    public void setCurrentPose(Pose2d currentPose) {
+
+        transformer = new Transform2d(
+            currentPose.getTranslation().minus(questNav.getPose().getTranslation()),
+            new Rotation2d() 
+        );
         
+        resetRotation(currentPose.getRotation());
+    }
+
+    public Pose2d getRobotPose() {
+        Pose2d questEstimate = questNav.getPose();
+      
+        Pose2d transformedPose = new Pose2d(
+            questEstimate.plus(transformer).getTranslation(),
+            getState().Pose.getRotation()
+        );
+        
+        return transformedPose;
     }
 
    
-
-
-    public Pose2d getRobotPose() {
-        Pose2d estimate = questNav.getPose();
-        return new Pose2d(estimate.plus(transformer).getTranslation(), getState().Pose.getRotation());
+    public void calibrateQuestNavOffset(Pose2d pose1, Pose2d pose2) {
+        questNav.calibrateQuestOffset(pose1, pose2);
     }
 
+    public boolean questNavConnected(){
+        return questNav.connected();
+    }
 
-
+   
 
     public Command driveSpeeds(ChassisSpeeds speeds) {
         return driveSpeeds(speeds, false);
-}
-
-  public PathPlannerAuto getAutoPath(String autoName) {
-        return new PathPlannerAuto(autoName);
     }
 
-
-   
+    public PathPlannerAuto getAutoPath(String autoName) {
+        return new PathPlannerAuto(autoName);
+    }
 
     public Command driveSpeeds(ChassisSpeeds speeds, boolean slowed) {
         return run(() -> setControl(speeds, slowed)).until(() -> true);
     }
 
-   
-
-    /**
-     * Creates a new auto factory for this drivetrain with the given
-     * trajectory logger.
-     *
-     * @param trajLogger Logger for the trajectory
-     * @return AutoFactory for this drivetrain
-     */
-   
     public void zeroPosition(){
         resetPose(new Pose2d());
     }
    
     public Command setZeroSpeed() {
-            
-                        return driveSpeeds(new ChassisSpeeds());
-        }
+        return driveSpeeds(new ChassisSpeeds());
+    }
 
-    
     public void updateRobotHeight(double height) {
         percentSpeed = (25 - height) / 25;
     }
@@ -201,46 +184,33 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         );
     }
 
-  
+    public void calculateQuestNavSpeeds(){
+        double currentTime = System.currentTimeMillis() / 1000.0;
+        
+        Pose2d pose = questNav.getPose();
+        double dt = currentTime - lastUpdateTime;
+        
+        if (dt > 0.05){
+        double vx = (pose.getX() - poseforSpeedCalc.getX()) / dt;
+        double vy = (pose.getY() - poseforSpeedCalc.getY()) / dt;
+        
+        // Update cache
+        questNavSpeed = new ChassisSpeeds(vx, vy, getState().Speeds.omegaRadiansPerSecond);
+        
+        // Update stored values
+        poseforSpeedCalc = getRobotPose();
+        lastUpdateTime = currentTime; 
+        }
+    }
 
-public void calculateQuestNavSpeeds(){
-    double currentTime = System.currentTimeMillis() / 1000.0;
-    
-    Pose2d pose = questNav.getPose();
-    double dt = currentTime - lastUpdateTime;
-    
-    // Calculate velocities
-    double vx = (pose.getX() - poseforSpeedCalc.getX()) / dt;
-    double vy = (pose.getY() - poseforSpeedCalc.getY()) / dt;
-    
-    // Update cache
-    questNavSpeed = new ChassisSpeeds(vx, vy, getState().Speeds.omegaRadiansPerSecond );
-    
-    // Update stored values
-
-    poseforSpeedCalc = getRobotPose();
-
-    lastUpdateTime = currentTime; 
-}
-
-
-public ChassisSpeeds getQuestNavSpeeds(){
-     calculateQuestNavSpeeds();
-    return questNavSpeed;
-    
-}
-
-public Pose2d getBasePose2d(){
-    return basePose2d;
-}
-public Pose2d getQuestNavRegularPose(){
-    return questNav.getQuestNavPose();
-}
+    public ChassisSpeeds getQuestNavSpeeds(){
+        calculateQuestNavSpeeds();
+        return questNavSpeed;
+    }
 
 
     @Override
     public void periodic() {
-
         calculateQuestNavSpeeds();
 
         if (!appliedPerspective || DriverStation.isDisabled()) {
@@ -253,13 +223,8 @@ public Pose2d getQuestNavRegularPose(){
             });
         }
 
-      
-        
-
         SmartDashboard.putNumber("XX SPED", getQuestNavSpeeds().vxMetersPerSecond);
         SmartDashboard.putNumber("YY SPEED", getQuestNavSpeeds().vyMetersPerSecond);
         SmartDashboard.updateValues();
-
-
     }
 }
