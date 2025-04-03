@@ -30,6 +30,9 @@ public class Robot extends TimedRobot {
     Command autonomousCommand;
     private final Field2d m_field = new Field2d();
 
+    private Pose2d pose2d1 = new Pose2d();
+    private Pose2d pose2d2 = new Pose2d();
+
 
     
 
@@ -72,7 +75,6 @@ public class Robot extends TimedRobot {
     public void robotPeriodic() {
         m_field.setRobotPose(container.getDrivetrain().getRobotPose());
 
-        SmartDashboard.putBoolean("Quest Connected", container.getDrivetrain().questNavConnected());
         SmartDashboard.putNumber("CAN Utilization %", RobotController.getCANStatus().percentBusUtilization * 100.0);
 
           SmartDashboard.putNumber("Voltage", RobotController.getBatteryVoltage());
@@ -82,7 +84,7 @@ public class Robot extends TimedRobot {
 
 
         robotPublisher.set(container.getDrivetrain().getRobotPose());
-        speedPublisher.set(container.getDrivetrain().getQuestNavSpeeds());
+        speedPublisher.set(container.getDrivetrain().getStateSpeeds());
 
         CommandScheduler.getInstance().run();
 
@@ -165,6 +167,8 @@ public class Robot extends TimedRobot {
          container.getDrivetrain().setCurrentPose(new Pose2d(1,1, new Rotation2d()));
         } 
 
+        
+    
 
         container.driveJoysticks(
                         controller.getLeftX(),
@@ -189,6 +193,8 @@ public class Robot extends TimedRobot {
 
         if (controller.getAButtonPressed()) container.stow().schedule();
         if (controller.getYButtonPressed()) container.climb().schedule();
+
+
         
         if (board.getButtonPressed(Action.Target_Low)) container.targetLow();
         if (board.getButtonPressed(Action.Target_Medium)) container.targetMedium();
