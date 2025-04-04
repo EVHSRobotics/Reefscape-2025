@@ -65,7 +65,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     QuestNav questNav = new QuestNav();
 
-    Transform2d questNavCompensate = new Transform2d(-0.025,0.04,Rotation2d.fromDegrees(-89.04));
+
 
     private Pose2d basePose2d = new Pose2d();
     //private Transform2d transformer = new Transform2d();
@@ -139,29 +139,20 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
     public void setCurrentPose(Pose2d currentPose){
         resetPose(currentPose);
-        resetRotation(currentPose.getRotation());
-        questNav.resetFullPosition();
-
-        transformer = currentPose.getTranslation().minus(questNav.getUFPose().getTranslation());
+        transformer = currentPose.getTranslation().minus(questNav.getRobotPose().getTranslation());
     }
-
 
 
     public Pose2d getRobotPose() {
-        return new Pose2d( questNav.getUFTranslation().plus(transformer), getState().Pose.getRotation()).plus(questNavCompensate);
+        return new Pose2d(questNav.getRobotPose().getTranslation().plus(transformer), getState().Pose.getRotation());
     }
 
-    public Pose2d getUnfiliteredPose(){
-return new Pose2d( questNav.getUFTranslation(), getState().Pose.getRotation());
+    public Translation2d geTranslation2d(){
+        return transformer;
     }
+   
 
-    public void calibrateQuestNavOffset(Pose2d pose){
-    questNavCompensate = getUnfiliteredPose().minus(pose).div(2);
-  
-    }
-    public Transform2d getQuestNavTransform2d(){
-        return questNavCompensate;
-    }
+   
 
 
     public Command driveSpeeds(ChassisSpeeds speeds) {

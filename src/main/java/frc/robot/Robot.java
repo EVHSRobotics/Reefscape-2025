@@ -10,6 +10,7 @@ import choreo.auto.AutoChooser;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
@@ -34,7 +35,7 @@ public class Robot extends TimedRobot {
     Command autonomousCommand;
     private final Field2d m_field = new Field2d();
 
-    private Pose2d pose2d1 = new Pose2d();
+
 
 
     
@@ -45,11 +46,11 @@ public class Robot extends TimedRobot {
              StructPublisher<Pose2d> robotPublisher = NetworkTableInstance.getDefault()
     .getStructTopic("Robot Pose", Pose2d.struct).publish();
 
-    StructPublisher<Transform2d> basePublisher = NetworkTableInstance.getDefault()
-    .getStructTopic("Base Pose", Transform2d.struct).publish();
+    StructPublisher<Translation2d> translationPublisher = NetworkTableInstance.getDefault()
+    .getStructTopic("Translation", Translation2d.struct).publish();
 
-    StructPublisher<Pose2d> calibratePose = NetworkTableInstance.getDefault()
-.getStructTopic("MyStates", Pose2d.struct).publish();
+    StructPublisher<Transform2d> transform2d = NetworkTableInstance.getDefault()
+.getStructTopic("MyStates", Transform2d.struct).publish();
 
 
 
@@ -87,8 +88,8 @@ public class Robot extends TimedRobot {
 
 
         robotPublisher.set(container.getDrivetrain().getRobotPose());
-        calibratePose.set(pose2d1);
-        basePublisher.set(container.getDrivetrain().getQuestNavTransform2d());
+        translationPublisher.set(container.getDrivetrain().geTranslation2d());
+        
 
         CommandScheduler.getInstance().run();
 
@@ -172,8 +173,6 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
-        SmartDashboard.putNumber("XOFFSET", container.getDrivetrain().getQuestNavTransform2d().getX());
-        SmartDashboard.putNumber("YOFFSET", container.getDrivetrain().getQuestNavTransform2d().getY());
 
         container.driveJoysticks(controller.getLeftX(), controller.getLeftY(), controller.getRightX(), controller.getLeftTriggerAxis() > 0.2);
         if (controller.getXButtonPressed()){
@@ -205,10 +204,9 @@ public class Robot extends TimedRobot {
             CommandScheduler.getInstance().cancelAll();
         } 
 
-        // if (controller.getAButtonPressed()) container.stow().schedule();
-        // if (controller.getYButtonPressed()) container.climb().schedule();
-        if (controller.getAButtonPressed()) pose2d1 = container.getDrivetrain().getUnfiliteredPose();
-        if (controller.getYButtonPressed()) container.getDrivetrain().calibrateQuestNavOffset(pose2d1);
+         if (controller.getAButtonPressed()) container.stow().schedule();
+         if (controller.getYButtonPressed()) container.climb().schedule();
+
 
 
         
@@ -216,8 +214,6 @@ public class Robot extends TimedRobot {
         if (board.getButtonPressed(Action.Target_Medium)) container.targetMedium();
         if (board.getButtonPressed(Action.Target_High)) container.targetHigh();
 
-        //if(board.getButtonPressed(Action.Align_Left)) pose2d1 = container.getDrivetrain().getUnfiliteredQuestNav();
-        //if(board.getButtonPressed(Action.Align_Right)) container.getDrivetrain().calibrateQuestNavOffset(pose2d1);
 
 
 

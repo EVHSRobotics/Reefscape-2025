@@ -14,7 +14,6 @@ import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class QuestNav {
   // Configure Network Tables topics (questnav/...) to communicate with the Quest HMD
@@ -32,19 +31,23 @@ public class QuestNav {
 
   // Local heading helper variables
   private float yaw_offset = 0.0f;
-  private Pose2d resetPosition = new Pose2d();
-
-  private Transform2d questNavCompensate = new Transform2d();
 
 
-  public void setBasePosition(Pose2d basePos){
-    yaw_offset = (float) basePos.getRotation().getDegrees();
-    resetPosition = basePos;
+ 
+    public Pose2d getRobotPose() {
+      
+      //12.5inches & 58Mm
+      Transform2d sensorToRobot = new Transform2d(
+          new Translation2d(-0.3175, 0.058),
+          new Rotation2d(0)
+      );
+      
+      return getQuestNavPose().plus(sensorToRobot);
   }
 
-  public Pose2d returnbasePose(){
-    return resetPosition;
-  }
+
+ 
+
 
   // Gets the battery percent of the Quest.
   public double getBatteryPercent() {
@@ -75,7 +78,6 @@ public class QuestNav {
 
   // Zero the absolute 3D position of the robot (similar to long-pressing the quest logo)
   public void zeroPosition() {
-    resetPosition = getUFPose();
     if (questMiso.get() != 99) {
       questMosi.set(1);
     }
@@ -106,14 +108,14 @@ public class QuestNav {
     return ret;
   }
 
-  public Translation2d getUFTranslation() {
+  private Translation2d getQuestNavTranslation() {
     float[] questnavPosition = questPosition.get();
     return new Translation2d(questnavPosition[2], -questnavPosition[0]);
   }
 
 
-  public Pose2d getUFPose() {
-    Pose2d estimate = new Pose2d(getUFTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
+  private Pose2d getQuestNavPose() {
+    Pose2d estimate = new Pose2d(getQuestNavTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
     return estimate;
   }
 
