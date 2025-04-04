@@ -48,7 +48,7 @@ public class QuestNav {
 
  
 
-
+//
   // Gets the battery percent of the Quest.
   public double getBatteryPercent() {
     return questBatteryPercent.get();
