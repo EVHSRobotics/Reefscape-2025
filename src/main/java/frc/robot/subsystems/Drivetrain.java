@@ -21,6 +21,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -65,7 +66,8 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     QuestNav questNav = new QuestNav();
 
     private Pose2d basePose2d = new Pose2d();
-    private Transform2d transformer = new Transform2d();
+    //private Transform2d transformer = new Transform2d();
+    private Translation2d transformer = new Translation2d();
     
 
     ChassisSpeeds questNavSpeed = new ChassisSpeeds();
@@ -134,21 +136,26 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
     }
 
     public void setCurrentPose(Pose2d currentPose){
-        transformer = currentPose.minus(questNav.getPose());
         resetPose(currentPose);
-         resetRotation(currentPose.getRotation());
-        
+        resetRotation(currentPose.getRotation());
+        questNav.resetFullPosition();
+
+        transformer = currentPose.getTranslation().minus(questNav.getUFPose().getTranslation());
     }
 
-   
 
 
     public Pose2d getRobotPose() {
-        Pose2d estimate = questNav.getPose(); 
-        return new Pose2d(estimate.plus(transformer).getTranslation(), getState().Pose.getRotation());
+        return new Pose2d( questNav.getUFPose().getTranslation().plus(transformer), getState().Pose.getRotation());
     }
 
+    public Pose2d getUnfiliteredQuestNav(){
+        return questNav.getUFPose();
+    }
 
+    public void calibrateQuestNavOffset(Pose2d pose){
+        questNav.setQuestNavCompensate(pose);
+    }
 
 
     public Command driveSpeeds(ChassisSpeeds speeds) {
@@ -159,33 +166,10 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
         return new PathPlannerAuto(autoName);
     }
 
-
-   
-
     public Command driveSpeeds(ChassisSpeeds speeds, boolean slowed) {
         return run(() -> setControl(speeds, slowed)).until(() -> true);
     }
-
-   
-
-    /**
-     * Creates a new auto factory for this drivetrain with the given
-     * trajectory logger.
-     *
-     * @param trajLogger Logger for the trajectory
-     * @return AutoFactory for this drivetrain
-     */
-   
-    public void zeroPosition(){
-        resetPose(new Pose2d());
-    }
-   
-    public Command setZeroSpeed() {
-            
-                        return driveSpeeds(new ChassisSpeeds());
-        }
-
-    
+ 
     public void updateRobotHeight(double height) {
         percentSpeed = (25 - height) / 25;
     }
@@ -203,45 +187,11 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
   
 
-public void calculateQuestNavSpeeds(){
-    double currentTime = System.currentTimeMillis() / 1000.0;
-    
-    Pose2d pose = questNav.getPose();
-    double dt = currentTime - lastUpdateTime;
-    
-    // Calculate velocities
-    double vx = (pose.getX() - poseforSpeedCalc.getX()) / dt;
-    double vy = (pose.getY() - poseforSpeedCalc.getY()) / dt;
-    
-    // Update cache
-    questNavSpeed = new ChassisSpeeds(vx, vy, getState().Speeds.omegaRadiansPerSecond );
-    
-    // Update stored values
-
-    poseforSpeedCalc = getRobotPose();
-
-    lastUpdateTime = currentTime; 
-}
-
-
-public ChassisSpeeds getQuestNavSpeeds(){
-     calculateQuestNavSpeeds();
-    return questNavSpeed;
-    
-}
-
-public Pose2d getBasePose2d(){
-    return basePose2d;
-}
-public Pose2d getQuestNavRegularPose(){
-    return questNav.getQuestNavPose();
-}
 
 
     @Override
     public void periodic() {
 
-        calculateQuestNavSpeeds();
 
         if (!appliedPerspective || DriverStation.isDisabled()) {
             DriverStation.getAlliance().ifPresent(allianceColor -> {
@@ -256,8 +206,6 @@ public Pose2d getQuestNavRegularPose(){
       
         
 
-        SmartDashboard.putNumber("XX SPED", getQuestNavSpeeds().vxMetersPerSecond);
-        SmartDashboard.putNumber("YY SPEED", getQuestNavSpeeds().vyMetersPerSecond);
         SmartDashboard.updateValues();
 
 

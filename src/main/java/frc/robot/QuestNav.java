@@ -5,6 +5,7 @@ import com.google.errorprone.annotations.RestrictedApi;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Quaternion;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.FloatArraySubscriber;
@@ -32,11 +33,8 @@ public class QuestNav {
   private float yaw_offset = 0.0f;
   private Pose2d resetPosition = new Pose2d();
 
-  // Gets the Quest's measured position.
-  public Pose2d getPose() {
-    return getQuestNavPose();
-   // return new Pose2d(getQuestNavPose().minus(resetPosition).getTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
-  }
+  private Transform2d questNavCompensate = new Transform2d();
+
 
   public void setBasePosition(Pose2d basePos){
     yaw_offset = (float) basePos.getRotation().getDegrees();
@@ -76,7 +74,7 @@ public class QuestNav {
 
   // Zero the absolute 3D position of the robot (similar to long-pressing the quest logo)
   public void zeroPosition() {
-    resetPosition = getPose();
+    resetPosition = getUFPose();
     if (questMiso.get() != 99) {
       questMosi.set(1);
     }
@@ -107,14 +105,18 @@ public class QuestNav {
     return ret;
   }
 
-  private Translation2d getQuestNavTranslation() {
+  public Translation2d getUFTranslation() {
     float[] questnavPosition = questPosition.get();
     return new Translation2d(questnavPosition[2], -questnavPosition[0]);
   }
 
 
-  public Pose2d getQuestNavPose() {
-    var oculousPositionCompensated = getQuestNavTranslation().minus(new Translation2d(0, 0.1651)); // 6.5
-    return new Pose2d(oculousPositionCompensated, Rotation2d.fromDegrees(getOculusYaw()));
+  public Pose2d getUFPose() {
+    Pose2d estimate = new Pose2d(getUFTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
+    return estimate.plus(questNavCompensate);
+  }
+
+  public void setQuestNavCompensate(Pose2d oppisite){
+    questNavCompensate = oppisite.minus(getUFPose()).div(-2);
   }
 }

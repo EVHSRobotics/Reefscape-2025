@@ -31,7 +31,6 @@ public class Robot extends TimedRobot {
     private final Field2d m_field = new Field2d();
 
     private Pose2d pose2d1 = new Pose2d();
-    private Pose2d pose2d2 = new Pose2d();
 
 
     
@@ -199,6 +198,11 @@ public class Robot extends TimedRobot {
         if (board.getButtonPressed(Action.Target_Low)) container.targetLow();
         if (board.getButtonPressed(Action.Target_Medium)) container.targetMedium();
         if (board.getButtonPressed(Action.Target_High)) container.targetHigh();
+
+        if(board.getButtonPressed(Action.Align_Left)) pose2d1 = container.getDrivetrain().getUnfiliteredQuestNav();
+        if(board.getButtonPressed(Action.Align_Right)) container.getDrivetrain().calibrateQuestNavOffset(pose2d1);
+
+
 
         if (controller.getLeftBumperButtonPressed()) container.runIntake().schedule();
         if (controller.getRightBumperButtonPressed()) container.runOuttake().schedule();
