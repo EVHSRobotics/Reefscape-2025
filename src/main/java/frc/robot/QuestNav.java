@@ -14,6 +14,7 @@ import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class QuestNav {
   // Configure Network Tables topics (questnav/...) to communicate with the Quest HMD
@@ -113,10 +114,8 @@ public class QuestNav {
 
   public Pose2d getUFPose() {
     Pose2d estimate = new Pose2d(getUFTranslation(), Rotation2d.fromDegrees(getOculusYaw()));
-    return estimate.plus(questNavCompensate);
+    return estimate;
   }
 
-  public void setQuestNavCompensate(Pose2d oppisite){
-    questNavCompensate = oppisite.minus(getUFPose()).div(-2);
-  }
+
 }

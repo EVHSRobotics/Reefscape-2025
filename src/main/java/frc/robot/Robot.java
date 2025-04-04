@@ -4,15 +4,19 @@
 
 package frc.robot;
 
+import java.security.Timestamp;
+
 import choreo.auto.AutoChooser;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -41,11 +45,11 @@ public class Robot extends TimedRobot {
              StructPublisher<Pose2d> robotPublisher = NetworkTableInstance.getDefault()
     .getStructTopic("Robot Pose", Pose2d.struct).publish();
 
-    StructPublisher<Pose2d> basePublisher = NetworkTableInstance.getDefault()
-    .getStructTopic("Base Pose", Pose2d.struct).publish();
+    StructPublisher<Transform2d> basePublisher = NetworkTableInstance.getDefault()
+    .getStructTopic("Base Pose", Transform2d.struct).publish();
 
-    StructPublisher<ChassisSpeeds> speedPublisher = NetworkTableInstance.getDefault()
-.getStructTopic("MyStates", ChassisSpeeds.struct).publish();
+    StructPublisher<Pose2d> calibratePose = NetworkTableInstance.getDefault()
+.getStructTopic("MyStates", Pose2d.struct).publish();
 
 
 
@@ -83,11 +87,13 @@ public class Robot extends TimedRobot {
 
 
         robotPublisher.set(container.getDrivetrain().getRobotPose());
-        speedPublisher.set(container.getDrivetrain().getStateSpeeds());
+        calibratePose.set(pose2d1);
+        basePublisher.set(container.getDrivetrain().getQuestNavTransform2d());
 
         CommandScheduler.getInstance().run();
 
         container.getDrivetrain().updateRobotHeight(container.getElevator().getPosition());
+        
 
         container.updateLEDs();
 
@@ -108,6 +114,12 @@ public class Robot extends TimedRobot {
         SmartDashboard.putBoolean("Has Algae", container.getArm().hasAlgae());
 
         // Display relative pose
+
+
+        container.getDrivetrain().addVisionMeasurement(container.getDrivetrain().getRobotPose(), Timer.getFPGATimestamp());
+        container.getDrivetrain().addVisionMeasurement(LimelightHelpers.getRedPoseEstimate("limelight-left"), Timer.getFPGATimestamp());
+        container.getDrivetrain().addVisionMeasurement(LimelightHelpers.getRedPoseEstimate("limelight-right"), Timer.getFPGATimestamp());
+
 
        
         SmartDashboard.updateValues();
@@ -160,6 +172,9 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
+        SmartDashboard.putNumber("XOFFSET", container.getDrivetrain().getQuestNavTransform2d().getX());
+        SmartDashboard.putNumber("YOFFSET", container.getDrivetrain().getQuestNavTransform2d().getY());
+
         container.driveJoysticks(controller.getLeftX(), controller.getLeftY(), controller.getRightX(), controller.getLeftTriggerAxis() > 0.2);
         if (controller.getXButtonPressed()){
          container.getDrivetrain().seedFieldCentric();
@@ -190,8 +205,10 @@ public class Robot extends TimedRobot {
             CommandScheduler.getInstance().cancelAll();
         } 
 
-        if (controller.getAButtonPressed()) container.stow().schedule();
-        if (controller.getYButtonPressed()) container.climb().schedule();
+        // if (controller.getAButtonPressed()) container.stow().schedule();
+        // if (controller.getYButtonPressed()) container.climb().schedule();
+        if (controller.getAButtonPressed()) pose2d1 = container.getDrivetrain().getUnfiliteredPose();
+        if (controller.getYButtonPressed()) container.getDrivetrain().calibrateQuestNavOffset(pose2d1);
 
 
         
@@ -199,8 +216,8 @@ public class Robot extends TimedRobot {
         if (board.getButtonPressed(Action.Target_Medium)) container.targetMedium();
         if (board.getButtonPressed(Action.Target_High)) container.targetHigh();
 
-        if(board.getButtonPressed(Action.Align_Left)) pose2d1 = container.getDrivetrain().getUnfiliteredQuestNav();
-        if(board.getButtonPressed(Action.Align_Right)) container.getDrivetrain().calibrateQuestNavOffset(pose2d1);
+        //if(board.getButtonPressed(Action.Align_Left)) pose2d1 = container.getDrivetrain().getUnfiliteredQuestNav();
+        //if(board.getButtonPressed(Action.Align_Right)) container.getDrivetrain().calibrateQuestNavOffset(pose2d1);
 
 
 
