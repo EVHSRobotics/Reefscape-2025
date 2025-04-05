@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.Vision;
 import frc.robot.subsystems.Arm;
 
 public class RobotContainer {
@@ -32,6 +33,7 @@ public class RobotContainer {
         Elevator elevator;
 
         CANdle lights;
+        Vision vision;
 
         Mode mode;
         Elevator.Position coralLevel, algaeLevel;
@@ -62,6 +64,7 @@ public class RobotContainer {
 
         public RobotContainer() {
 
+                vision = new Vision(Constants.Vision.frontID);
                 
 
                 drivetrain = new Drivetrain(
@@ -113,11 +116,14 @@ public class RobotContainer {
 
         }
 
+        public Vision getVision() {
+                return vision;
+        }
+
         public Drivetrain getDrivetrain() {
                 return drivetrain;
         }
 
-        // In your Container.java class constructor or a setup method
 
         public Arm getArm() {
                 return arm;
@@ -140,14 +146,15 @@ public class RobotContainer {
         }
 
         public void updateLEDs() {
-                if (mode == Mode.Coral)
-                        lights.setLEDs(255, 0, 255);
-                else
-                        lights.setLEDs(0, 255, 0);
+            
         }
 
         public void modeCoral() {
                 mode = Mode.Coral;
+        }
+
+        public void setCorrectPosition(){
+                lights.setLEDs(255, 255, 255);
         }
 
         public void modeAlgae() {

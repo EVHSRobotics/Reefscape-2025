@@ -14,7 +14,7 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants.*;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.*;
 
 public class Constants {
@@ -25,6 +25,24 @@ public class Constants {
 
         public static double deadband = 0.1;
 
+        public static Pose2d[] leftTargets = new Pose2d[] {
+                new Pose2d(3.13, 4.19, new Rotation2d(0)),
+                new Pose2d(3.95, 5.28, new Rotation2d(-60)),
+                new Pose2d(5.31, 5.12, new Rotation2d(-120)),
+                new Pose2d(5.85, 3.86, new Rotation2d(180)),
+                new Pose2d(5.02, 2.76, new Rotation2d(120)),
+                new Pose2d(3.67, 2.93, new Rotation2d(60))
+        };
+
+        public static Pose2d[] rightTargets = new Pose2d[] {
+                new Pose2d(3.13, 3.86, new Rotation2d(0)),
+                new Pose2d(3.67, 5.12, new Rotation2d(-60)),
+                new Pose2d(5.02, 5.28, new Rotation2d(-120)),
+                new Pose2d(5.85, 4.19, new Rotation2d(180)),
+                new Pose2d(5.31, 2.93, new Rotation2d(120)),
+                new Pose2d(3.95, 2.76, new Rotation2d(60))
+        };
+
         public class Drivetrain {
                 static int frontLeftDriveID = 5, frontLeftSteerID = 6, frontLeftEncoderID = 52;
                 static int frontRightDriveID = 3, frontRightSteerID = 4, frontRightEncoderID = 51;
@@ -33,8 +51,8 @@ public class Constants {
 
                 static int gyroID = 13;
 
-                public static Rotation2d redPerspective = Rotation2d.k180deg, bluePerspective = Rotation2d.kZero;
-                public static PIDController translationPID = new PIDController(15, 0, 0); 
+                public static Rotation2d redPerspective = Rotation2d.kZero, bluePerspective = Rotation2d.k180deg;
+                public static PIDController translationPID = new PIDController(5, 0, 0); 
                 public static PIDController headingPID = new PIDController(5, 0, 0); 
 
                 static TalonFXConfiguration driveConfigs = new TalonFXConfiguration();
@@ -67,9 +85,9 @@ public class Constants {
                 static Current slipCurrent = Amps.of(80);
 
                 public static double maxSpeed = 4.73;
-                public static double maxAcceleration = 7.3;
-                public static double maxAngularSpeed = 7.07;
-                public static double maxAngularAcceleration = 28.42;
+                public static double maxAcceleration = 9.81;
+                public static double maxAngularSpeed = 8.24;
+                public static double maxAngularAcceleration = 38.8;
 
                 static double coupleRatio = 3.5714285714285716;
                 static double driveRatio = 6.746031746031747;
@@ -140,37 +158,23 @@ public class Constants {
 
         public class Arm {
                 public static int pivotID = 30, rollersID = 41;
-                public static int coralRangeID = 32, algaeRangeID = 0;
+                public static int coralRangeID = 32, algaeRangeID = 33;
         }
 
         public class Elevator {
                 public static int leftID = 20, rightID = 21;
         }
 
-        public class Vision {
-                public static String frontID = "limelight";
-
-                public static String frontLeftID = "photonvision-frontLeft", frontRightID = "photonvision-frontRight",backLeftID = "photonvision-backLeft",backRightID = "photonvision-backRight";
-                public static Transform3d frontLeftOffset = new Transform3d(), frontRightOffset = new Transform3d(), backLeftOffset = new Transform3d(), backRightOffset = new Transform3d();
-
-                public static Pose2d[] leftPoses = new Pose2d[] {
-                        new Pose2d(2.6, 4.2, new Rotation2d(0))
-                };
-
-                public static Pose2d[] rightPoses = new Pose2d[] {
-                        new Pose2d(2.6, 4.04, new Rotation2d(0))
-                };
-
-                public static Pose2d[] centerPoses = new Pose2d[] {
-                        new Pose2d(2.6, 3.88, new Rotation2d(0))
-                };
-        }
-
         public class Climber {
-                public static int climberID = 0;
+                public static int winchID = 60;
         }
 
-        public class Led {
-                public static int ledID = 0;
+        public class Vision {
+                public static String frontID = "limelight-center";
+        }
+
+        public class Quest {
+                public static Translation2d positionOffset = new Translation2d();
+                public static double rotationOffset = 0;
         }
 }
