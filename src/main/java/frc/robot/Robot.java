@@ -72,11 +72,14 @@ public class Robot extends TimedRobot {
     @Override
     public void robotInit() {
         SmartDashboard.putData("Field", m_field);
-        container.getDrivetrain().setCurrentPose(new Pose2d(1,1, new Rotation2d()));
+        container.getDrivetrain().setCurrentPose(new Pose2d(7.1252,7.570, new Rotation2d()));
     }
 
     @Override
     public void robotPeriodic() {
+        if(container.getVision().getEstimates().equals(container.getDrivetrain().getRobotPose())){
+            container.setCorrectPosition();
+        };
         m_field.setRobotPose(container.getDrivetrain().getRobotPose());
 
         SmartDashboard.putNumber("CAN Utilization %", RobotController.getCANStatus().percentBusUtilization * 100.0);
@@ -118,11 +121,10 @@ public class Robot extends TimedRobot {
 
 
         container.getDrivetrain().addVisionMeasurement(container.getDrivetrain().getRobotPose(), Timer.getFPGATimestamp());
-        container.getDrivetrain().addVisionMeasurement(LimelightHelpers.getRedPoseEstimate("limelight-left"), Timer.getFPGATimestamp());
-        container.getDrivetrain().addVisionMeasurement(LimelightHelpers.getRedPoseEstimate("limelight-right"), Timer.getFPGATimestamp());
 
 
-       
+        autonomousCommand = container.getAutonomousCommand();
+
         SmartDashboard.updateValues();
     }
 
@@ -138,15 +140,12 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousInit() {
-        container.getDrivetrain().seedFieldCentric();
         CommandScheduler.getInstance().cancelAll();
-    
-        // Get selected auto command from container
-        autonomousCommand = container.getAutonomousCommand();
-        
-        if (autonomousCommand != null) {
-            autonomousCommand.schedule();
-        }
+
+         if (autonomousCommand != null) {
+             autonomousCommand.schedule();
+         }
+        //Center_l4(container).schedule();
 }
 
     @Override
@@ -177,7 +176,6 @@ public class Robot extends TimedRobot {
         container.driveJoysticks(controller.getLeftX(), controller.getLeftY(), controller.getRightX(), controller.getLeftTriggerAxis() > 0.2);
         if (controller.getXButtonPressed()){
          container.getDrivetrain().seedFieldCentric();
-         container.getDrivetrain().setCurrentPose(new Pose2d(1,1, new Rotation2d()));
         } 
 
         
