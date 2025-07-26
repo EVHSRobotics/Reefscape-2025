@@ -40,8 +40,8 @@ public class QuestNav {
   private FloatArraySubscriber questEulerAngles = nt4Table.getFloatArrayTopic("eulerAngles").subscribe(new float[]{0.0f, 0.0f, 0.0f});
   private DoubleSubscriber questBatteryPercent = nt4Table.getDoubleTopic("batteryPercent").subscribe(0.0f);
 
-  // in terms of robotcs coordainate systme, use invser to conver the regular transofmrt 2d which bot to quest
-  public Transform2d questToBot = new Transform2d(0.274,-0.05, Rotation2d.fromDegrees(90)).inverse();
+  
+  public Transform2d questToBot = new Transform2d(0.05,0.274, Rotation2d.fromDegrees(90)).inverse();
 
   public Translation2d transformer = new Translation2d();
   // Local heading helper variables
