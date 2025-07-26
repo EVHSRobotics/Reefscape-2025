@@ -4,6 +4,8 @@
 
 package frc.robot.subsystems;
 
+import java.util.Queue;
+
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.swerve.SwerveDrivetrain;
@@ -23,6 +25,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
+import frc.robot.QuestNav;
 import frc.robot.Utilities;
 
 public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> implements Subsystem {
@@ -33,6 +36,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
         boolean appliedPerspective = false;
         double antiTipping = 1;
+        public QuestNav questNav;
 
         public Drivetrain(SwerveDrivetrainConstants drivetrainConfigs, SwerveModuleConstants<?, ?, ?>... modules) {
                 super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConfigs, modules);
@@ -52,9 +56,11 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                         err.printStackTrace();
                 }
 
+                questNav = new QuestNav();
+
                 AutoBuilder.configure(
                         this::getRobotPose,
-                        this::resetPose,
+                        this::setCurrentPose,
                         () -> getState().Speeds,
                         (speeds, feedforwards) -> setRobotControl(speeds),
                         new PPHolonomicDriveController(
@@ -66,8 +72,9 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                 );
         }
 
-        public void resetPose(){
-                
+        public void setCurrentPose(Pose2d currentPose){
+                resetPose(currentPose);
+                questNav.setPose(currentPose); 
         }
         public Pose2d getRobotPose() {
 

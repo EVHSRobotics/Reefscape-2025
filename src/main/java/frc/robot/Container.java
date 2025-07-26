@@ -35,7 +35,7 @@ public class Container {
         Mode mode;
         Arm.Position coralAngle;
         Elevator.Position coralLevel, algaeLevel;
-        QuestNav questNav;
+
 
         public enum Mode {
                 Coral,
@@ -43,8 +43,7 @@ public class Container {
         }
 
         public Container() {
-                questNav = new QuestNav();
-                drivetrain = new Drivetrain(
+              drivetrain = new Drivetrain(
                         Constants.Drivetrain.drivetrainConfigs,
 
                         Constants.Drivetrain.frontLeftConfigs,

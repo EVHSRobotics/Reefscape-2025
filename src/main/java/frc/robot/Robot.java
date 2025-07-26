@@ -61,9 +61,9 @@ public class Robot extends TimedRobot {
                 SmartDashboard.updateValues();
 
                 container.updateRobotPose(container.vision.getEstimate(Camera.Front));
-                if (container.questNav.getBatteryPercent() >0){
-                QuestPublisher.set(container.questNav.getRobotPose());
-                //container.updateRobotPose(container.questNav.getRobotPose());
+                if (container.drivetrain.questNav.getBatteryPercent() >0){
+                QuestPublisher.set(container.drivetrain.questNav.getRobotPose());
+                //container.updateRobotPose(container.drivetrain.questNav.getRobotPose());
                 }
                 container.drivetrain.updateRobotHeight(container.elevator.getPosition());
                 container.updateLEDs();
