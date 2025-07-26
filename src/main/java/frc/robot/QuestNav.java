@@ -40,14 +40,14 @@ public class QuestNav {
   private FloatArraySubscriber questEulerAngles = nt4Table.getFloatArrayTopic("eulerAngles").subscribe(new float[]{0.0f, 0.0f, 0.0f});
   private DoubleSubscriber questBatteryPercent = nt4Table.getDoubleTopic("batteryPercent").subscribe(0.0f);
 
-  
-  public Transform2d questToBot = new Transform2d(0.05,0.274, Rotation2d.fromDegrees(90)).inverse();
+  // in terms of robotcs coordainate systme, use invser to conver the regular transofmrt 2d which bot to quest
+  public Transform2d questToBot = new Transform2d(0.274,-0.05, Rotation2d.fromDegrees(90)).inverse();
 
   public Translation2d transformer = new Translation2d();
   // Local heading helper variables
   private float yaw_offset = 90.0f;
  
- 
+ //.
 
 
   public Pose2d getRobotPose() {
@@ -58,7 +58,7 @@ public class QuestNav {
     if (getBatteryPercent() > 0) 
     {
         //return new Pose2d(getQuestNavTranslation().plus(translator).plus(transformer), getQuestNavPose().getRotation());
-        return getQuestNavPose().transformBy(questToBot);
+        return getQuestNavPose().transformBy(questToBot).plus(new Transform2d(transformer,Rotation2d.fromDegrees(0)));
     }
     return null;
 }
@@ -126,7 +126,7 @@ public class QuestNav {
   public Translation2d getQuestNavTranslation() {
     float[] questnavPosition = questPosition.get();
     //questnav2 -> questnav x, quest0 -> quest y
-    return new Translation2d(questnavPosition[2], -questnavPosition[0]);
+    return new Translation2d(questnavPosition[0], questnavPosition[2]);
   }
 
   
@@ -137,5 +137,7 @@ public class QuestNav {
     return estimate;
   }
 
-
+  public void setPose(Pose2d pose){
+transformer =  transformer.plus(pose.getTranslation().minus(getRobotPose().getTranslation()));
+}
 }
