@@ -122,6 +122,7 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
 
         @Override
         public void periodic() {
+                if(!DriverStation.isAutonomous()){
                 if (!appliedPerspective || DriverStation.isDisabled()) {
                         DriverStation.getAlliance().ifPresent(allianceColor -> {
                                 setOperatorPerspectiveForward(
@@ -131,5 +132,6 @@ public class Drivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> imp
                                 appliedPerspective = true;
                         });
                 }
+        }       
         }
 }

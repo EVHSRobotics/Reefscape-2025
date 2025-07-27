@@ -49,7 +49,7 @@ public class Robot extends TimedRobot {
                 robotPublisher = NetworkTableInstance.getDefault().getStructTopic("Robot Pose", Pose2d.struct)
                                 .publish();
                 QuestPublisher = NetworkTableInstance.getDefault().getStructTopic("Quest Pose", Pose2d.struct)
-                                .publish();
+                                .publish();     
 
                 leftPublisher = NetworkTableInstance.getDefault().getStructTopic("Left Target", Pose2d.struct)
                                 .publish();
@@ -124,47 +124,32 @@ public class Robot extends TimedRobot {
 
         @Override
         public void teleopPeriodic() {
-                if (controller1.getXButton())
-                        scheduler.cancelAll();
+                if (board.getButtonPressed(Action.Reset)) scheduler.cancelAll();
 
                 container.driveJoysticks(
-                                controller.getLeftX(),
-                                controller.getLeftY(),
-                                (!(controller.getRightTriggerAxis() > 0.1)) ? controller.getRightX() : 0,
-                                controller.getLeftTriggerAxis() > 0.1).schedule();
+                        controller.getLeftX(),
+                        controller.getLeftY(),
+                        controller.getRightX(),
+                        controller.getLeftTriggerAxis() > 0.1
+                ).schedule();
 
-                if (controller.getPOV() == 270)
-                        container.scheduleOnly(container.alignToPose(leftTarget));
-                if (controller.getPOV() == 90)
-                        container.scheduleOnly(container.alignToPose(rightTarget));
+                if (controller.getPOV() == 270) container.scheduleOnly(container.alignToPose(leftTarget));
+                if (controller.getPOV() == 90) container.scheduleOnly(container.alignToPose(rightTarget));
+                
+                if (controller.getLeftBumperButtonPressed()) container.scheduleOnly(container.intake());
+                if (controller.getRightBumperButtonPressed()) container.scheduleOnly(container.teleOuttake());
 
-                if (controller.getLeftBumperButtonPressed())
-                        container.scheduleOnly(container.intake());
-                if (controller.getRightBumperButtonPressed())
-                        container.scheduleOnly(container.teleOuttake());
+                if (controller.getAButtonPressed()) container.scheduleOnly(container.stow());
+                if (controller.getYButtonPressed()) container.climb().schedule();
 
-                if (controller.getAButtonPressed())
-                        container.scheduleOnly(container.stow());
-                if (controller.getYButtonPressed())
-                        container.climb().schedule();
+                if (controller.getXButtonPressed()) container.drivetrain.seedFieldCentric();
 
-                if (controller.getXButtonPressed())
-                        container.drivetrain.seedFieldCentric();
-
-                if (controller.getPOV() == 0)
-                        container.mode = Container.Mode.Coral;
-                if (controller.getPOV() == 180)
-                        container.mode = Container.Mode.Algae;
-
-                if (controller.getRightTriggerAxis() > 0.1) {
-                        if (controller.getRightY() > 0.8)
-                                container.targetLow();
-                        if (controller.getRightX() > 0.8)
-                                container.targetMedium();
-                        if (controller.getRightY() < -0.8)
-                                container.targetHigh();
-                        if (controller.getRightX() < -0.8)
-                                container.targetTrough();
-                }
+                if (board.getButtonPressed(Action.Mode_Coral)) container.mode = Container.Mode.Coral;
+                if (board.getButtonPressed(Action.Mode_Algae)) container.mode = Container.Mode.Algae;
+                
+                if (board.getButtonPressed(Action.Target_Low)) container.targetLow();
+                if (board.getButtonPressed(Action.Target_Medium)) container.targetMedium();
+                if (board.getButtonPressed(Action.Target_High)) container.targetHigh();
+                if (board.getButtonPressed(Action.Target_Trough)) container.targetTrough();
         }
 }
