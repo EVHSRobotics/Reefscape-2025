@@ -8,6 +8,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -18,6 +19,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.ButtonBoard.Action;
 import frc.robot.subsystems.Vision.Camera;
 
@@ -103,7 +105,16 @@ public class Robot extends TimedRobot {
                 scheduler.cancelAll();
 
                 container.drivetrain.seedFieldCentric();
-                // routine.schedule();
+
+                routine = Commands.sequence(
+                        container.drivetrain.driveSpeeds(new ChassisSpeeds(3,0,0)),
+                        Commands.waitSeconds(3),
+                        container.drivetrain.driveSpeeds(new ChassisSpeeds(0,0,0)),
+                        container.autoOuttake(),
+                        container.stow());
+
+
+                 routine.schedule();
         }
 
         @Override
